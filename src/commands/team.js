@@ -133,25 +133,8 @@ async function handleDelete(interaction) {
 }
 
 async function handleOffer(interaction) {
-  const managerTeam = getManagerTeam(interaction.member);
-  
-  if (!managerTeam && !isAdmin(interaction.member)) {
-    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only team managers can send contract offers.')], ephemeral: true });
-  }
-
-  let team = managerTeam;
-  if (!team) {
-    const memberRoles = interaction.member.roles.cache;
-    for (const [roleId] of memberRoles) {
-      const foundTeam = db.getTeamByRoleId.get(roleId);
-      if (foundTeam && foundTeam.manager_id === interaction.member.id) {
-        team = foundTeam;
-        break;
-      }
-    }
-  }
-
-  if (!team) {
+  if (isAdmin(interaction.member)) {
+    let team = null;
     for (const [roleId] of interaction.member.roles.cache) {
       const foundTeam = db.getTeamByRoleId.get(roleId);
       if (foundTeam) {
@@ -159,11 +142,38 @@ async function handleOffer(interaction) {
         break;
       }
     }
+    if (!team) {
+      return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not associated with any team. Admins must have a team role to send offers.')], ephemeral: true });
+    }
+    return processOffer(interaction, team);
+  }
+
+  const managerRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'manager');
+  if (!managerRole || !interaction.member.roles.cache.has(managerRole.id)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the Manager role to send contract offers.')], ephemeral: true });
+  }
+
+  let team = null;
+  for (const [roleId] of interaction.member.roles.cache) {
+    const foundTeam = db.getTeamByRoleId.get(roleId);
+    if (foundTeam && foundTeam.manager_id === interaction.member.id) {
+      team = foundTeam;
+      break;
+    }
   }
 
   if (!team) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not associated with any team.')], ephemeral: true });
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must be the manager of a team and have both the Manager role and team role.')], ephemeral: true });
   }
+
+  if (!interaction.member.roles.cache.has(team.role_id)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the team role to send offers for this team.')], ephemeral: true });
+  }
+
+  return processOffer(interaction, team);
+}
+
+async function processOffer(interaction, team) {
 
   const player = interaction.options.getUser('player');
   const salary = interaction.options.getString('salary');
@@ -202,14 +212,9 @@ async function handleOffer(interaction) {
 }
 
 async function handleRelease(interaction) {
-  const managerTeam = getManagerTeam(interaction.member);
-  
-  if (!managerTeam && !isAdmin(interaction.member)) {
-    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only team managers can release players.')], ephemeral: true });
-  }
+  let team = null;
 
-  let team = managerTeam;
-  if (!team) {
+  if (isAdmin(interaction.member)) {
     for (const [roleId] of interaction.member.roles.cache) {
       const foundTeam = db.getTeamByRoleId.get(roleId);
       if (foundTeam) {
@@ -217,10 +222,30 @@ async function handleRelease(interaction) {
         break;
       }
     }
-  }
+    if (!team) {
+      return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not associated with any team. Admins must have a team role to release players.')], ephemeral: true });
+    }
+  } else {
+    const managerRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'manager');
+    if (!managerRole || !interaction.member.roles.cache.has(managerRole.id)) {
+      return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the Manager role to release players.')], ephemeral: true });
+    }
 
-  if (!team) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not associated with any team.')], ephemeral: true });
+    for (const [roleId] of interaction.member.roles.cache) {
+      const foundTeam = db.getTeamByRoleId.get(roleId);
+      if (foundTeam && foundTeam.manager_id === interaction.member.id) {
+        team = foundTeam;
+        break;
+      }
+    }
+
+    if (!team) {
+      return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must be the manager of a team and have both the Manager role and team role.')], ephemeral: true });
+    }
+
+    if (!interaction.member.roles.cache.has(team.role_id)) {
+      return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the team role to release players from this team.')], ephemeral: true });
+    }
   }
 
   const playerUser = interaction.options.getUser('player');

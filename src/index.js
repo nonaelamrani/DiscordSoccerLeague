@@ -109,6 +109,13 @@ async function handleButtonInteraction(interaction) {
       });
     }
 
+    if (offer.player_id !== interaction.user.id) {
+      return interaction.reply({ 
+        embeds: [createErrorEmbed('Error', 'This offer is not for you.')],
+        ephemeral: true
+      });
+    }
+
     if (decision === 'accept') {
       db.createOrUpdatePlayer.run(interaction.user.id, interaction.user.username);
       const player = db.getPlayer.get(interaction.user.id);
