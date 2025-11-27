@@ -84,6 +84,18 @@ const setTeamManager = db.prepare(`
   UPDATE teams SET manager_id = ? WHERE id = ?
 `);
 
+const getTeamByManagerId = db.prepare(`
+  SELECT * FROM teams WHERE manager_id = ?
+`);
+
+const getTeamByName = db.prepare(`
+  SELECT * FROM teams WHERE name = ?
+`);
+
+const clearTeamManager = db.prepare(`
+  UPDATE teams SET manager_id = NULL WHERE id = ?
+`);
+
 const createOrUpdatePlayer = db.prepare(`
   INSERT INTO players (discord_id, name) VALUES (?, ?)
   ON CONFLICT(discord_id) DO UPDATE SET name = excluded.name
@@ -183,6 +195,9 @@ module.exports = {
   getTeamById,
   getAllTeams,
   setTeamManager,
+  getTeamByManagerId,
+  getTeamByName,
+  clearTeamManager,
   createOrUpdatePlayer,
   getPlayer,
   getPlayerById,

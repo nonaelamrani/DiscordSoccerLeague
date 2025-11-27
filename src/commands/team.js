@@ -77,6 +77,14 @@ const command = new SlashCommandBuilder()
       .addRoleOption(option =>
         option.setName('role')
           .setDescription('The manager role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('removemanager')
+      .setDescription('Remove a manager from a team')
+      .addRoleOption(option =>
+        option.setName('role')
+          .setDescription('Team role')
           .setRequired(true)));
 
 async function execute(interaction) {
@@ -97,6 +105,8 @@ async function execute(interaction) {
       return handleSetManager(interaction);
     case 'setmanagerrole':
       return handleSetManagerRole(interaction);
+    case 'removemanager':
+      return handleRemoveManager(interaction);
   }
 }
 
@@ -110,18 +120,20 @@ async function handleCreate(interaction) {
   const role = interaction.options.getRole('role');
 
   try {
-    const existing = db.getTeamByRoleId.get(role.id);
-    if (existing) {
+    const existingByRole = db.getTeamByRoleId.get(role.id);
+    if (existingByRole) {
       return interaction.reply({ embeds: [createErrorEmbed('Error', 'A team with this role already exists.')], ephemeral: true });
+    }
+
+    const existingByName = db.getTeamByName.get(name);
+    if (existingByName) {
+      return interaction.reply({ embeds: [createErrorEmbed('Error', `A team with the name "${name}" already exists.`)], ephemeral: true });
     }
 
     db.createTeam.run(name, short, role.id, null);
     return interaction.reply({ embeds: [createSuccessEmbed('Team Created', `Team **${name}** [${short}] has been created with role ${role}.`)] });
   } catch (error) {
     console.error('Error creating team:', error);
-    if (error.message.includes('UNIQUE constraint failed')) {
-      return interaction.reply({ embeds: [createErrorEmbed('Error', 'A team with this name already exists.')], ephemeral: true });
-    }
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'Failed to create team.')], ephemeral: true });
   }
 }
@@ -188,13 +200,16 @@ async function handleOffer(interaction) {
 }
 
 async function processOffer(interaction, team) {
-
   const player = interaction.options.getUser('player');
   const salary = interaction.options.getString('salary');
   const duration = interaction.options.getString('duration');
 
   if (player.bot) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot send offers to bots.')], ephemeral: true });
+  }
+
+  if (player.id === interaction.user.id) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'You cannot send a contract offer to yourself.')], ephemeral: true });
   }
 
   try {
@@ -327,6 +342,15 @@ async function handleSetManager(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
   }
 
+  if (team.manager_id) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `This team already has a manager (<@${team.manager_id}>). Use \`/team removemanager\` first.`)], ephemeral: true });
+  }
+
+  const existingTeam = db.getTeamByManagerId.get(managerUser.id);
+  if (existingTeam) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${managerUser.id}> is already the manager of **${existingTeam.name}**. A user can only manage one team.`)], ephemeral: true });
+  }
+
   db.createOrUpdatePlayer.run(managerUser.id, managerUser.username);
   const player = db.getPlayer.get(managerUser.id);
 
@@ -354,6 +378,46 @@ async function handleSetManagerRole(interaction) {
   db.setSetting.run('manager_role', role.id);
   
   return interaction.reply({ embeds: [createSuccessEmbed('Manager Role Set', `${role} has been set as the global Manager role. Managers must have this role to use manager commands.`)] });
+}
+
+async function handleRemoveManager(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can remove managers.')], ephemeral: true });
+  }
+
+  const role = interaction.options.getRole('role');
+
+  const team = db.getTeamByRoleId.get(role.id);
+  if (!team) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
+  }
+
+  if (!team.manager_id) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'This team does not have a manager.')], ephemeral: true });
+  }
+
+  const managerId = team.manager_id;
+  const player = db.getPlayer.get(managerId);
+
+  db.clearTeamManager.run(team.id);
+  
+  if (player) {
+    db.removeMembership.run(player.id, team.id);
+  }
+
+  const managerRoleSetting = db.getSetting.get('manager_role');
+
+  try {
+    const member = await interaction.guild.members.fetch(managerId);
+    await member.roles.remove(role.id);
+    if (managerRoleSetting) {
+      await member.roles.remove(managerRoleSetting.value);
+    }
+  } catch (error) {
+    console.error('Error removing roles:', error);
+  }
+
+  return interaction.reply({ embeds: [createSuccessEmbed('Manager Removed', `<@${managerId}> is no longer the manager of **${team.name}**.`)] });
 }
 
 module.exports = { command, execute };
