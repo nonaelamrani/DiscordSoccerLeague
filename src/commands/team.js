@@ -69,6 +69,14 @@ const command = new SlashCommandBuilder()
       .addRoleOption(option =>
         option.setName('role')
           .setDescription('Team role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('setmanagerrole')
+      .setDescription('Set the global manager role')
+      .addRoleOption(option =>
+        option.setName('role')
+          .setDescription('The manager role')
           .setRequired(true)));
 
 async function execute(interaction) {
@@ -87,6 +95,8 @@ async function execute(interaction) {
       return handleRoster(interaction);
     case 'setmanager':
       return handleSetManager(interaction);
+    case 'setmanagerrole':
+      return handleSetManagerRole(interaction);
   }
 }
 
@@ -148,8 +158,12 @@ async function handleOffer(interaction) {
     return processOffer(interaction, team);
   }
 
-  const managerRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'manager');
-  if (!managerRole || !interaction.member.roles.cache.has(managerRole.id)) {
+  const managerRoleSetting = db.getSetting.get('manager_role');
+  if (!managerRoleSetting) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager role has not been set. An admin must use `/team setmanagerrole` first.')], ephemeral: true });
+  }
+  
+  if (!interaction.member.roles.cache.has(managerRoleSetting.value)) {
     return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the Manager role to send contract offers.')], ephemeral: true });
   }
 
@@ -226,8 +240,12 @@ async function handleRelease(interaction) {
       return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not associated with any team. Admins must have a team role to release players.')], ephemeral: true });
     }
   } else {
-    const managerRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'manager');
-    if (!managerRole || !interaction.member.roles.cache.has(managerRole.id)) {
+    const managerRoleSetting = db.getSetting.get('manager_role');
+    if (!managerRoleSetting) {
+      return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager role has not been set. An admin must use `/team setmanagerrole` first.')], ephemeral: true });
+    }
+    
+    if (!interaction.member.roles.cache.has(managerRoleSetting.value)) {
       return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the Manager role to release players.')], ephemeral: true });
     }
 
@@ -296,6 +314,11 @@ async function handleSetManager(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can set team managers.')], ephemeral: true });
   }
 
+  const managerRoleSetting = db.getSetting.get('manager_role');
+  if (!managerRoleSetting) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager role has not been set. Use `/team setmanagerrole` first.')], ephemeral: true });
+  }
+
   const managerUser = interaction.options.getUser('manager');
   const role = interaction.options.getRole('role');
 
@@ -313,16 +336,24 @@ async function handleSetManager(interaction) {
   try {
     const member = await interaction.guild.members.fetch(managerUser.id);
     await member.roles.add(role.id);
-    
-    const managerRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'manager');
-    if (managerRole) {
-      await member.roles.add(managerRole.id);
-    }
+    await member.roles.add(managerRoleSetting.value);
   } catch (error) {
     console.error('Error adding roles:', error);
   }
 
-  return interaction.reply({ embeds: [createSuccessEmbed('Manager Set', `<@${managerUser.id}> is now the manager of **${team.name}**.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Manager Set', `<@${managerUser.id}> is now the manager of **${team.name}** and has been given the Manager role.`)] });
+}
+
+async function handleSetManagerRole(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can set the manager role.')], ephemeral: true });
+  }
+
+  const role = interaction.options.getRole('role');
+  
+  db.setSetting.run('manager_role', role.id);
+  
+  return interaction.reply({ embeds: [createSuccessEmbed('Manager Role Set', `${role} has been set as the global Manager role. Managers must have this role to use manager commands.`)] });
 }
 
 module.exports = { command, execute };

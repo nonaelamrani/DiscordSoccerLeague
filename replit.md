@@ -37,10 +37,11 @@ src/
 ### Team Management
 - `/team create name short role` - Create a team (Admin)
 - `/team delete role` - Delete a team (Admin)
-- `/team offer player salary duration` - Send contract offer (Manager)
-- `/team release player` - Release a player (Manager)
+- `/team setmanagerrole role` - Set the global manager role (Admin) - **Must be set first!**
+- `/team setmanager manager role` - Set team manager, gives them Manager role + team role (Admin)
+- `/team offer player salary duration` - Send contract offer (Manager with Manager role + team role)
+- `/team release player` - Release a player (Manager with Manager role + team role)
 - `/team roster` - Show team roster
-- `/team setmanager manager role` - Set team manager (Admin)
 
 ### Player Management
 - `/player info player` - Show player stats
