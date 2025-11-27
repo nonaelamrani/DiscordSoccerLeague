@@ -1,0 +1,91 @@
+Create a Discord Soccer League Bot using Node.js 18+ and discord.js v14 with an SQLite database. The bot manages teams, players, referees, and match statistics in a league environment. The bot should use slash commands, embeds, and button interactions.
+
+Features and Commands:
+
+Team Management
+
+/team create name short role → Create a team and assign a Discord role.
+
+/team delete role → Delete a team.
+
+/team offer player salary duration → Managers send a contract offer via DM with Accept/Decline buttons. Accepting gives the player the team role. Only managers can use this command.
+
+/team release player → Managers release a player from their team.
+
+/team roster → Show names of all players in the team.
+
+/team setmanager manager → Assign a manager to a team; automatically gives manager role and team role.
+
+Player Management
+
+/player info player → Show only player stats: goals, assists, mentions, MOTM counts. No number, position, rating, or team info.
+
+Referee Management
+
+/referee set user → Assign a referee role and add user to database.
+
+/referee remove user → Remove a referee.
+
+/referee list → List all referees.
+
+Statistics Management (Referees/Admins Only)
+
+/stats logchannel channel → Set a channel for logging stat changes.
+
+/stats addgoal player → Increment goals.
+
+/stats removegoal player → Decrement goals (admin only).
+
+/stats addassist player → Increment assists.
+
+/stats removeassist player → Decrement assists (admin only).
+
+/stats addmention players... → Increment mentions for one or more players.
+
+/stats removemention player → Decrement mentions.
+
+/stats addmotm player → Increment MOTM count.
+
+/stats removemotm player → Decrement MOTM count.
+
+Member-Accessible Stats Commands
+
+/stats playerstats player → Show only goals, assists, mentions, MOTM counts.
+
+/stats topscorers → Show players with the highest goals.
+
+/stats topplayermakers → Show players with the highest assists.
+
+Database Structure:
+
+Teams: id, name, short, role_id, manager_id, created_at
+
+Players: id, discord_id, name, goals, assists, mentions, motm
+
+Memberships: link players to teams with role (player or manager)
+
+Referees: discord_id
+
+Settings: key-value pairs (e.g., log channel)
+
+Interactions & Permissions:
+
+All offers are sent via DMs with Accept/Decline buttons; confirmation messages are sent to player.
+
+Manager commands require manager role + team role.
+
+Stat-modifying commands require referee or admin roles; normal players can only view stats.
+
+Teams are automatically resolved via role ID to avoid typing errors.
+
+Implementation Requirements:
+
+Slash commands must place required options before optional options to avoid Discord errors.
+
+Embed messages for offers, rosters, and player stats.
+
+Button interactions must respond properly to avoid “Unknown Interaction” errors.
+
+Fully handle database read/write with SQLite.
+
+Include proper error handling and logging.
