@@ -1,0 +1,164 @@
+require('dotenv').config();
+
+const { Client, GatewayIntentBits, REST, Routes, Collection, Events } = require('discord.js');
+const db = require('./database');
+const { createSuccessEmbed, createErrorEmbed } = require('./utils/embeds');
+
+const teamCommand = require('./commands/team');
+const playerCommand = require('./commands/player');
+const refereeCommand = require('./commands/referee');
+const statsCommand = require('./commands/stats');
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages
+  ]
+});
+
+client.commands = new Collection();
+client.commands.set('team', teamCommand);
+client.commands.set('player', playerCommand);
+client.commands.set('referee', refereeCommand);
+client.commands.set('stats', statsCommand);
+
+const commands = [
+  teamCommand.command.toJSON(),
+  playerCommand.command.toJSON(),
+  refereeCommand.command.toJSON(),
+  statsCommand.command.toJSON()
+];
+
+client.once(Events.ClientReady, async (readyClient) => {
+  console.log(`Logged in as ${readyClient.user.tag}!`);
+  
+  try {
+    const rest = new REST().setToken(process.env.DISCORD_TOKEN);
+    
+    console.log('Started refreshing application (/) commands.');
+    
+    if (process.env.GUILD_ID) {
+      await rest.put(
+        Routes.applicationGuildCommands(readyClient.user.id, process.env.GUILD_ID),
+        { body: commands }
+      );
+      console.log(`Successfully registered commands for guild ${process.env.GUILD_ID}`);
+    } else {
+      await rest.put(
+        Routes.applicationCommands(readyClient.user.id),
+        { body: commands }
+      );
+      console.log('Successfully registered global commands.');
+    }
+  } catch (error) {
+    console.error('Error registering commands:', error);
+  }
+});
+
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isChatInputCommand()) {
+    const command = client.commands.get(interaction.commandName);
+    
+    if (!command) {
+      console.error(`No command matching ${interaction.commandName} was found.`);
+      return;
+    }
+
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      console.error(`Error executing ${interaction.commandName}:`, error);
+      
+      const errorEmbed = createErrorEmbed('Error', 'There was an error while executing this command.');
+      
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ embeds: [errorEmbed], ephemeral: true });
+      } else {
+        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      }
+    }
+  } else if (interaction.isButton()) {
+    await handleButtonInteraction(interaction);
+  }
+});
+
+async function handleButtonInteraction(interaction) {
+  const [action, decision, teamIdStr] = interaction.customId.split('_');
+  
+  if (action !== 'offer') return;
+
+  try {
+    const teamId = parseInt(teamIdStr);
+    const team = db.getTeamById.get(teamId);
+    
+    if (!team) {
+      return interaction.update({ 
+        embeds: [createErrorEmbed('Error', 'This team no longer exists.')],
+        components: []
+      });
+    }
+
+    const offer = db.getPendingOffer.get(interaction.message.id);
+    
+    if (!offer) {
+      return interaction.update({ 
+        embeds: [createErrorEmbed('Error', 'This offer has expired or was already processed.')],
+        components: []
+      });
+    }
+
+    if (decision === 'accept') {
+      db.createOrUpdatePlayer.run(interaction.user.id, interaction.user.username);
+      const player = db.getPlayer.get(interaction.user.id);
+      
+      db.addMembership.run(player.id, team.id, 'player', offer.salary, offer.duration);
+      
+      try {
+        const guild = client.guilds.cache.find(g => {
+          const role = g.roles.cache.get(team.role_id);
+          return !!role;
+        });
+        
+        if (guild) {
+          const member = await guild.members.fetch(interaction.user.id);
+          await member.roles.add(team.role_id);
+        }
+      } catch (roleError) {
+        console.error('Error adding team role:', roleError);
+      }
+      
+      db.deletePendingOffer.run(interaction.message.id);
+      
+      return interaction.update({
+        embeds: [createSuccessEmbed('Contract Accepted', `You have joined **${team.name}**!\n\nSalary: ${offer.salary}\nDuration: ${offer.duration}`)],
+        components: []
+      });
+    } else if (decision === 'decline') {
+      db.deletePendingOffer.run(interaction.message.id);
+      
+      return interaction.update({
+        embeds: [createErrorEmbed('Contract Declined', `You have declined the offer from **${team.name}**.`)],
+        components: []
+      });
+    }
+  } catch (error) {
+    console.error('Error handling button interaction:', error);
+    
+    if (!interaction.replied && !interaction.deferred) {
+      return interaction.update({
+        embeds: [createErrorEmbed('Error', 'An error occurred while processing your response.')],
+        components: []
+      });
+    }
+  }
+}
+
+if (!process.env.DISCORD_TOKEN) {
+  console.error('ERROR: DISCORD_TOKEN environment variable is not set!');
+  console.log('Please set your Discord bot token as an environment variable.');
+  process.exit(1);
+}
+
+client.login(process.env.DISCORD_TOKEN);

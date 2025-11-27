@@ -1,14 +1,15 @@
 {
-  "name": "workspace",
+  "name": "discord-soccer-league-bot",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
   },
-  "keywords": [],
+  "keywords": ["discord", "bot", "soccer", "league"],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Discord Soccer League Bot for managing teams, players, referees, and match statistics",
   "dependencies": {
     "better-sqlite3": "^12.4.6",
     "discord.js": "^14.25.1",

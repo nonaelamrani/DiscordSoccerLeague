@@ -1,0 +1,139 @@
+const { EmbedBuilder } = require('discord.js');
+
+function createSuccessEmbed(title, description) {
+  return new EmbedBuilder()
+    .setColor(0x00FF00)
+    .setTitle(title)
+    .setDescription(description)
+    .setTimestamp();
+}
+
+function createErrorEmbed(title, description) {
+  return new EmbedBuilder()
+    .setColor(0xFF0000)
+    .setTitle(title)
+    .setDescription(description)
+    .setTimestamp();
+}
+
+function createInfoEmbed(title, description) {
+  return new EmbedBuilder()
+    .setColor(0x0099FF)
+    .setTitle(title)
+    .setDescription(description)
+    .setTimestamp();
+}
+
+function createPlayerStatsEmbed(player, member) {
+  return new EmbedBuilder()
+    .setColor(0x0099FF)
+    .setTitle(`Player Stats: ${player.name}`)
+    .setThumbnail(member?.displayAvatarURL() || null)
+    .addFields(
+      { name: 'Goals', value: `${player.goals}`, inline: true },
+      { name: 'Assists', value: `${player.assists}`, inline: true },
+      { name: 'Mentions', value: `${player.mentions}`, inline: true },
+      { name: 'MOTM', value: `${player.motm}`, inline: true }
+    )
+    .setTimestamp();
+}
+
+function createRosterEmbed(team, members, guild) {
+  const managers = members.filter(m => m.role === 'manager');
+  const players = members.filter(m => m.role === 'player');
+
+  const embed = new EmbedBuilder()
+    .setColor(0x0099FF)
+    .setTitle(`${team.name} [${team.short}] Roster`)
+    .setTimestamp();
+
+  if (managers.length > 0) {
+    const managerList = managers.map(m => `<@${m.discord_id}>`).join('\n');
+    embed.addFields({ name: 'Manager(s)', value: managerList, inline: false });
+  }
+
+  if (players.length > 0) {
+    const playerList = players.map(m => `<@${m.discord_id}>`).join('\n');
+    embed.addFields({ name: 'Players', value: playerList, inline: false });
+  }
+
+  if (members.length === 0) {
+    embed.setDescription('No members in this team yet.');
+  }
+
+  return embed;
+}
+
+function createOfferEmbed(team, salary, duration) {
+  return new EmbedBuilder()
+    .setColor(0xFFD700)
+    .setTitle('Contract Offer')
+    .setDescription(`You have received a contract offer from **${team.name}**!`)
+    .addFields(
+      { name: 'Team', value: team.name, inline: true },
+      { name: 'Salary', value: salary, inline: true },
+      { name: 'Duration', value: duration, inline: true }
+    )
+    .setFooter({ text: 'Click Accept to join or Decline to reject' })
+    .setTimestamp();
+}
+
+function createTopScorersEmbed(players) {
+  const embed = new EmbedBuilder()
+    .setColor(0xFFD700)
+    .setTitle('Top Scorers')
+    .setTimestamp();
+
+  if (players.length === 0) {
+    embed.setDescription('No players with goals yet.');
+  } else {
+    const list = players.map((p, i) => `${i + 1}. <@${p.discord_id}> - **${p.goals}** goals`).join('\n');
+    embed.setDescription(list);
+  }
+
+  return embed;
+}
+
+function createTopPlaymakersEmbed(players) {
+  const embed = new EmbedBuilder()
+    .setColor(0xFFD700)
+    .setTitle('Top Playmakers')
+    .setTimestamp();
+
+  if (players.length === 0) {
+    embed.setDescription('No players with assists yet.');
+  } else {
+    const list = players.map((p, i) => `${i + 1}. <@${p.discord_id}> - **${p.assists}** assists`).join('\n');
+    embed.setDescription(list);
+  }
+
+  return embed;
+}
+
+function createRefereesEmbed(referees) {
+  const embed = new EmbedBuilder()
+    .setColor(0x0099FF)
+    .setTitle('Referees')
+    .setTimestamp();
+
+  if (referees.length === 0) {
+    embed.setDescription('No referees registered yet.');
+  } else {
+    const list = referees.map(r => `<@${r.discord_id}>`).join('\n');
+    embed.setDescription(list);
+  }
+
+  return embed;
+}
+
+module.exports = {
+  createSuccessEmbed,
+  createErrorEmbed,
+  createInfoEmbed,
+  createPlayerStatsEmbed,
+  createRosterEmbed,
+  createOfferEmbed,
+  createTopScorersEmbed,
+  createTopPlaymakersEmbed,
+  createRefereesEmbed
+};
