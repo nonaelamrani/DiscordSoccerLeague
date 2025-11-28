@@ -61,10 +61,6 @@ db.exec(`
   );
 `);
 
-db.exec(`
-  ALTER TABLE pending_offers ADD COLUMN position TEXT;
-`);
-
 const createTeam = db.prepare(`
   INSERT INTO teams (name, short, role_id, manager_id) VALUES (?, ?, ?, ?)
 `);
