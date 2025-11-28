@@ -133,6 +133,26 @@ const command = new SlashCommandBuilder()
       .addRoleOption(option =>
         option.setName('team')
           .setDescription('Team role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('cleardatabase')
+      .setDescription('Clear entire database (Owner only)')
+      .addBooleanOption(option =>
+        option.setName('confirm1')
+          .setDescription('Confirm deletion (must be true)')
+          .setRequired(true))
+      .addBooleanOption(option =>
+        option.setName('confirm2')
+          .setDescription('Confirm deletion (must be true)')
+          .setRequired(true))
+      .addBooleanOption(option =>
+        option.setName('confirm3')
+          .setDescription('Confirm deletion (must be true)')
+          .setRequired(true))
+      .addBooleanOption(option =>
+        option.setName('confirm4')
+          .setDescription('Confirm deletion (must be true)')
           .setRequired(true)));
 
 async function execute(interaction) {
@@ -165,6 +185,8 @@ async function execute(interaction) {
       return handleAddPlayer(interaction);
     case 'removeplayer':
       return handleRemovePlayer(interaction);
+    case 'cleardatabase':
+      return handleClearDatabase(interaction);
   }
 }
 
@@ -705,6 +727,40 @@ async function handleRemovePlayer(interaction) {
   } catch (error) {
     console.error('Error removing player:', error);
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'Failed to remove player from team.')], ephemeral: true });
+  }
+}
+
+async function handleClearDatabase(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only bot owners can clear the database.')], ephemeral: true });
+  }
+
+  const confirm1 = interaction.options.getBoolean('confirm1');
+  const confirm2 = interaction.options.getBoolean('confirm2');
+  const confirm3 = interaction.options.getBoolean('confirm3');
+  const confirm4 = interaction.options.getBoolean('confirm4');
+
+  if (!confirm1 || !confirm2 || !confirm3 || !confirm4) {
+    return interaction.reply({ embeds: [createErrorEmbed('Confirmation Failed', 'All 4 confirmations must be set to TRUE to clear the database.')], ephemeral: true });
+  }
+
+  try {
+    await interaction.deferReply({ ephemeral: true });
+
+    // Clear all tables
+    db.db.exec('DELETE FROM pending_offers;');
+    db.db.exec('DELETE FROM memberships;');
+    db.db.exec('DELETE FROM players;');
+    db.db.exec('DELETE FROM referees;');
+    db.db.exec('DELETE FROM teams;');
+    db.db.exec('DELETE FROM matches;');
+    db.db.exec('DELETE FROM settings;');
+
+    const successEmbed = createSuccessEmbed('Database Cleared', 'All data has been permanently deleted from the database. The bot is now in a clean state.');
+    return interaction.editReply({ embeds: [successEmbed] });
+  } catch (error) {
+    console.error('Error clearing database:', error);
+    return interaction.editReply({ embeds: [createErrorEmbed('Error', `Failed to clear database: ${error.message}`)] });
   }
 }
 
