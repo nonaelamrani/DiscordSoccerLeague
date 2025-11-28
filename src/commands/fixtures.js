@@ -20,8 +20,8 @@ const command = new SlashCommandBuilder()
       .setDescription('Delete the posted fixtures embed'));
 
 async function handlePost(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can post fixtures.');
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can post fixtures.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
@@ -53,8 +53,8 @@ async function handlePost(interaction) {
 }
 
 async function handleDone(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can mark fixtures as done.');
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can mark fixtures as done.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
@@ -85,8 +85,8 @@ async function handleDone(interaction) {
 }
 
 async function handleRemove(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can remove fixtures.');
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can remove fixtures.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 

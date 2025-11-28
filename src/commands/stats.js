@@ -255,8 +255,8 @@ async function handleAddMention(interaction) {
 }
 
 async function handleRemoveMention(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only referees or administrators can modify stats.')], ephemeral: true });
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can remove mentions.')], ephemeral: true });
   }
 
   const playerUser = interaction.options.getUser('player');
@@ -292,8 +292,8 @@ async function handleAddMotm(interaction) {
 }
 
 async function handleRemoveMotm(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only referees or administrators can modify stats.')], ephemeral: true });
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can remove MOTM.')], ephemeral: true });
   }
 
   const playerUser = interaction.options.getUser('player');
