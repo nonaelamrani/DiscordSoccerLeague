@@ -495,7 +495,8 @@ async function handleRoster(interaction) {
   }
 
   const members = db.getTeamMembers.all(team.id);
-  return interaction.reply({ embeds: [createRosterEmbed(team, members, interaction.guild)] });
+  const assistantManagers = db.getTeamAssistantManagers.all(team.id);
+  return interaction.reply({ embeds: [createRosterEmbed(team, members, assistantManagers)] });
 }
 
 async function handleSetManager(interaction) {
@@ -619,26 +620,28 @@ async function handleSetAssistantManager(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
   }
 
-  if (team.assistant_manager_id) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', `This team already has an assistant manager (<@${team.assistant_manager_id}>). Use \`/team removeassistantmanager\` first.`)], ephemeral: true });
+  const assistantManagerCount = db.getAssistantManagerCount.get(team.id);
+  if (assistantManagerCount.count >= 2) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'This team already has 2 assistant managers. Maximum is 2 per team.')]});
   }
 
-  const existingTeam = db.getTeamByAssistantManagerId.get(assistantManagerUser.id);
-  if (existingTeam) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${assistantManagerUser.id}> is already the assistant manager of **${existingTeam.name}**. A user can only be assistant manager of one team.`)], ephemeral: true });
+  const existingTeams = db.getAssistantManagerTeams.all(assistantManagerUser.id);
+  if (existingTeams.length > 0) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${assistantManagerUser.id}> is already an assistant manager of another team. A user can only be assistant manager of one team.`)], ephemeral: true });
   }
 
   db.createOrUpdatePlayer.run(assistantManagerUser.id, assistantManagerUser.username);
   const player = db.getPlayer.get(assistantManagerUser.id);
 
-  // Check if the user is already a player on any team
+  // Check if the user is already a player on other teams
   const playerTeams = db.getPlayerTeams.all(player.id);
-  if (playerTeams.length > 0) {
-    const teamList = playerTeams.map(t => `**${t.name}**`).join(', ');
-    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${assistantManagerUser.id}> is already a player on ${teamList}. A user cannot be both a player and an assistant manager.`)], ephemeral: true });
+  const otherTeams = playerTeams.filter(t => t.id !== team.id);
+  if (otherTeams.length > 0) {
+    const teamList = otherTeams.map(t => `**${t.name}**`).join(', ');
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${assistantManagerUser.id}> is already a player on ${teamList}. Assistant managers can only be players on the same team they manage.`)], ephemeral: true });
   }
 
-  db.setTeamAssistantManager.run(assistantManagerUser.id, team.id);
+  db.addAssistantManager.run(team.id, assistantManagerUser.id);
   db.addMembership.run(player.id, team.id, 'manager', null, null);
 
   try {
@@ -649,7 +652,7 @@ async function handleSetAssistantManager(interaction) {
     console.error('Error adding roles:', error);
   }
 
-  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Set', `<@${assistantManagerUser.id}> is now the assistant manager of **${team.name}** and has been given the Manager role.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Set', `<@${assistantManagerUser.id}> is now an assistant manager of **${team.name}** and has been given the Manager role.`)] });
 }
 
 async function handleRemoveAssistantManager(interaction) {
@@ -664,14 +667,15 @@ async function handleRemoveAssistantManager(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
   }
 
-  if (!team.assistant_manager_id) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'This team does not have an assistant manager.')], ephemeral: true });
+  const assistantManagers = db.getTeamAssistantManagers.all(team.id);
+  if (assistantManagers.length === 0) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'This team does not have any assistant managers.')], ephemeral: true });
   }
 
-  const assistantManagerId = team.assistant_manager_id;
+  const assistantManagerId = assistantManagers[0].discord_id;
   const player = db.getPlayer.get(assistantManagerId);
 
-  db.clearTeamAssistantManager.run(team.id);
+  db.removeAssistantManager.run(team.id, assistantManagerId);
   
   if (player) {
     db.removeMembership.run(player.id, team.id);
@@ -689,7 +693,7 @@ async function handleRemoveAssistantManager(interaction) {
     console.error('Error removing roles:', error);
   }
 
-  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Removed', `<@${assistantManagerId}> is no longer the assistant manager of **${team.name}**.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Removed', `<@${assistantManagerId}> is no longer an assistant manager of **${team.name}**.`)] });
 }
 
 async function handleSetAssistantManagerRole(interaction) {

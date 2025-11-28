@@ -38,8 +38,7 @@ function createPlayerStatsEmbed(player, member) {
     .setTimestamp();
 }
 
-function createRosterEmbed(team, members, guild) {
-  const managers = members.filter(m => m.role === 'manager');
+function createRosterEmbed(team, members, assistantManagers = []) {
   const players = members.filter(m => m.role === 'player');
 
   const embed = new EmbedBuilder()
@@ -49,7 +48,11 @@ function createRosterEmbed(team, members, guild) {
 
   const managerInfo = [];
   if (team.manager_id) managerInfo.push(`**Manager:** <@${team.manager_id}>`);
-  if (team.assistant_manager_id) managerInfo.push(`**Assistant Manager:** <@${team.assistant_manager_id}>`);
+  if (assistantManagers.length > 0) {
+    assistantManagers.forEach(am => {
+      managerInfo.push(`**Assistant Manager:** <@${am.discord_id}>`);
+    });
+  }
   
   if (managerInfo.length > 0) {
     embed.addFields({ name: 'Leadership', value: managerInfo.join('\n'), inline: false });
@@ -60,7 +63,7 @@ function createRosterEmbed(team, members, guild) {
     embed.addFields({ name: 'Players', value: playerList, inline: false });
   }
 
-  if (team.manager_id === null && team.assistant_manager_id === null && members.length === 0) {
+  if (team.manager_id === null && assistantManagers.length === 0 && members.length === 0) {
     embed.setDescription('No team leadership or members assigned yet.');
   }
 
