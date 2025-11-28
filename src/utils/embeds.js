@@ -127,37 +127,6 @@ function createRefereesEmbed(referees) {
   return embed;
 }
 
-function createFixturesEmbed(groupedByDate) {
-  const embed = new EmbedBuilder()
-    .setColor(0x0099FF)
-    .setTitle('📅 Upcoming Fixtures')
-    .setTimestamp();
-
-  // Sort dates chronologically
-  const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
-    return new Date(a) - new Date(b);
-  });
-
-  sortedDates.forEach(dateKey => {
-    const fixtures = groupedByDate[dateKey];
-    let matchesText = '';
-
-    fixtures.forEach(fixture => {
-      const time = new Date(fixture.kickoff_time);
-      const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-      matchesText += `**${fixture.home_team_name}** vs **${fixture.away_team_name}** • ${timeStr}\n`;
-    });
-
-    embed.addFields({
-      name: dateKey,
-      value: matchesText,
-      inline: false
-    });
-  });
-
-  return embed;
-}
-
 module.exports = {
   createSuccessEmbed,
   createErrorEmbed,
@@ -167,6 +136,5 @@ module.exports = {
   createOfferEmbed,
   createTopScorersEmbed,
   createTopPlaymakersEmbed,
-  createRefereesEmbed,
-  createFixturesEmbed
+  createRefereesEmbed
 };

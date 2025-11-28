@@ -59,17 +59,6 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
   );
-
-  CREATE TABLE IF NOT EXISTS fixtures (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    home_team_id INTEGER NOT NULL,
-    away_team_id INTEGER NOT NULL,
-    kickoff_time DATETIME NOT NULL,
-    status TEXT DEFAULT 'upcoming' CHECK(status IN ('upcoming', 'completed', 'cancelled')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
-    FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE
-  );
 `);
 
 const createTeam = db.prepare(`
@@ -199,27 +188,6 @@ const getPlayerPendingOffers = db.prepare(`
   SELECT * FROM pending_offers WHERE player_id = ?
 `);
 
-const createFixture = db.prepare(`
-  INSERT INTO fixtures (home_team_id, away_team_id, kickoff_time) VALUES (?, ?, ?)
-`);
-
-const getUpcomingFixtures = db.prepare(`
-  SELECT f.*, t1.name as home_team_name, t1.short as home_team_short, t2.name as away_team_name, t2.short as away_team_short
-  FROM fixtures f
-  JOIN teams t1 ON f.home_team_id = t1.id
-  JOIN teams t2 ON f.away_team_id = t2.id
-  WHERE f.status = 'upcoming' AND f.kickoff_time >= datetime('now')
-  ORDER BY f.kickoff_time ASC
-`);
-
-const getAllFixtures = db.prepare(`
-  SELECT f.*, t1.name as home_team_name, t1.short as home_team_short, t2.name as away_team_name, t2.short as away_team_short
-  FROM fixtures f
-  JOIN teams t1 ON f.home_team_id = t1.id
-  JOIN teams t2 ON f.away_team_id = t2.id
-  ORDER BY f.kickoff_time DESC
-`);
-
 module.exports = {
   db,
   createTeam,
@@ -251,8 +219,5 @@ module.exports = {
   createPendingOffer,
   getPendingOffer,
   deletePendingOffer,
-  getPlayerPendingOffers,
-  createFixture,
-  getUpcomingFixtures,
-  getAllFixtures
+  getPlayerPendingOffers
 };
