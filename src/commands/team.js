@@ -2,6 +2,7 @@ const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = re
 const db = require('../database');
 const { isAdmin, isManagerOfTeam, getManagerTeam } = require('../utils/permissions');
 const { createSuccessEmbed, createErrorEmbed, createRosterEmbed, createOfferEmbed } = require('../utils/embeds');
+const { unixToTimestamp } = require('../utils/timestamps');
 
 const command = new SlashCommandBuilder()
   .setName('team')
@@ -452,6 +453,7 @@ async function handleRelease(interaction) {
           console.error('Error fetching contractor:', e);
         }
         
+        const unixTimestamp = Math.floor(Date.now() / 1000);
         const embed = new EmbedBuilder()
           .setColor(0xFF0000)
           .setTitle('❌ Player Released')
@@ -461,7 +463,7 @@ async function handleRelease(interaction) {
             { name: 'Player', value: `<@${playerUser.id}>`, inline: true },
             { name: 'Team', value: team.name, inline: true },
             { name: 'Released by', value: contractorName, inline: true },
-            { name: 'Released on', value: new Date().toLocaleString(), inline: false }
+            { name: 'Released on', value: unixToTimestamp(unixTimestamp), inline: false }
           )
           .setTimestamp();
         await channel.send({ embeds: [embed] });
@@ -818,6 +820,7 @@ async function handleAddPlayer(interaction) {
             console.error('Error fetching admin:', e);
           }
           
+          const unixTimestamp = Math.floor(Date.now() / 1000);
           const embed = new EmbedBuilder()
             .setColor(0x00FF00)
             .setTitle('✅ Player Added')
@@ -827,7 +830,7 @@ async function handleAddPlayer(interaction) {
               { name: 'Player', value: `<@${playerUser.id}>`, inline: true },
               { name: 'Team', value: team.name, inline: true },
               { name: 'Added by', value: contractorName, inline: true },
-              { name: 'Added on', value: new Date().toLocaleString(), inline: false }
+              { name: 'Added on', value: unixToTimestamp(unixTimestamp), inline: false }
             )
             .setTimestamp();
           await channel.send({ embeds: [embed] });
@@ -893,6 +896,7 @@ async function handleRemovePlayer(interaction) {
             console.error('Error fetching admin:', e);
           }
           
+          const unixTimestamp = Math.floor(Date.now() / 1000);
           const embed = new EmbedBuilder()
             .setColor(0xFF0000)
             .setTitle('❌ Player Removed')
@@ -902,7 +906,7 @@ async function handleRemovePlayer(interaction) {
               { name: 'Player', value: `<@${playerUser.id}>`, inline: true },
               { name: 'Team', value: team.name, inline: true },
               { name: 'Removed by', value: contractorName, inline: true },
-              { name: 'Removed on', value: new Date().toLocaleString(), inline: false }
+              { name: 'Removed on', value: unixToTimestamp(unixTimestamp), inline: false }
             )
             .setTimestamp();
           await channel.send({ embeds: [embed] });
