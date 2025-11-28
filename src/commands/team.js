@@ -731,8 +731,10 @@ async function handleRemovePlayer(interaction) {
 }
 
 async function handleClearDatabase(interaction) {
-  if (!isAdmin(interaction.member)) {
-    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only bot owners can clear the database.')], ephemeral: true });
+  const AUTHORIZED_USER_ID = '1003592269212950598';
+  
+  if (interaction.user.id !== AUTHORIZED_USER_ID) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only @san_z1 can clear the database.')], ephemeral: true });
   }
 
   const confirm1 = interaction.options.getBoolean('confirm1');
