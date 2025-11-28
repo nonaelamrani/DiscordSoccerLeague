@@ -61,7 +61,11 @@ const command = new SlashCommandBuilder()
   .addSubcommand(subcommand =>
     subcommand
       .setName('roster')
-      .setDescription('Show team roster'))
+      .setDescription('Show team roster')
+      .addRoleOption(option =>
+        option.setName('role')
+          .setDescription('Team role')
+          .setRequired(true)))
   .addSubcommand(subcommand =>
     subcommand
       .setName('setmanager')
@@ -471,18 +475,11 @@ async function handleRelease(interaction) {
 }
 
 async function handleRoster(interaction) {
-  let team = null;
-  
-  for (const [roleId] of interaction.member.roles.cache) {
-    const foundTeam = db.getTeamByRoleId.get(roleId);
-    if (foundTeam) {
-      team = foundTeam;
-      break;
-    }
-  }
+  const role = interaction.options.getRole('role');
 
+  const team = db.getTeamByRoleId.get(role.id);
   if (!team) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not part of any team.')], ephemeral: true });
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
   }
 
   const members = db.getTeamMembers.all(team.id);
