@@ -103,8 +103,8 @@ const command = new SlashCommandBuilder()
           .setRequired(true)));
 
 async function handleCreate(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can create matches.');
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can create matches.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
@@ -154,8 +154,8 @@ async function handleCreate(interaction) {
 }
 
 async function handleEdit(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can edit matches.');
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can edit matches.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
@@ -236,8 +236,8 @@ async function handleEdit(interaction) {
 }
 
 async function handleCancel(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can cancel matches.');
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can cancel matches.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
@@ -271,8 +271,8 @@ async function handleCancel(interaction) {
 }
 
 async function handleReschedule(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can reschedule matches.');
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can reschedule matches.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
