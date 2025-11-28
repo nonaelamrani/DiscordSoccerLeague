@@ -122,8 +122,8 @@ async function handleCreate(interaction) {
     const result = db.createMatch.run(homeTeam.id, awayTeam.id, stadium, matchTimestamp);
     const matchId = result.lastInsertRowid;
     const successEmbed = createSuccessEmbed('Match Created', 
-      `**${homeTeam.name}** vs **${awayTeam.name}**\n` +
-      `Stadium: ${stadium}\nTime: ${unixToTimestamp(matchTimestamp)}\n\n` +
+      `<@&${homeTeam.role_id}> ⚽ <@&${awayTeam.role_id}>\n` +
+      `🏟️ Stadium: ${stadium}\n🕐 Time: ${unixToTimestamp(matchTimestamp)}\n\n` +
       `**Match ID:** ${matchId}`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
@@ -201,9 +201,12 @@ async function handleEdit(interaction) {
   try {
     db.updateMatch.run(homeTeamId, awayTeamId, stadium, matchTimestamp, matchId);
     const updatedMatch = db.getMatch.get(matchId);
+    // Get role IDs for the teams
+    const homeTeam = db.getTeamById.get(homeTeamId);
+    const awayTeam = db.getTeamById.get(awayTeamId);
     const successEmbed = createSuccessEmbed('Match Updated',
-      `**${updatedMatch.home_team_name}** vs **${updatedMatch.away_team_name}**\n` +
-      `Stadium: ${updatedMatch.stadium}\nTime: ${unixToTimestamp(updatedMatch.match_timestamp)}`);
+      `<@&${homeTeam.role_id}> ⚽ <@&${awayTeam.role_id}>\n` +
+      `🏟️ Stadium: ${updatedMatch.stadium}\n🕐 Time: ${unixToTimestamp(updatedMatch.match_timestamp)}`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error updating match:', error);
@@ -234,8 +237,11 @@ async function handleCancel(interaction) {
 
   try {
     db.cancelMatch.run(reason, matchId);
+    // Get role IDs for the teams
+    const homeTeam = db.getTeamById.get(match.home_team_id);
+    const awayTeam = db.getTeamById.get(match.away_team_id);
     const successEmbed = createSuccessEmbed('Match Cancelled',
-      `**${match.home_team_name}** vs **${match.away_team_name}**\nReason: ${reason}`);
+      `<@&${homeTeam.role_id}> ⚽ <@&${awayTeam.role_id}>\n📍 Reason: ${reason}`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error cancelling match:', error);
@@ -277,9 +283,12 @@ async function handleReschedule(interaction) {
   try {
     const newTimestamp = dateTimeToUnix(newDate, newTime);
     db.updateMatch.run(match.home_team_id, match.away_team_id, match.stadium, newTimestamp, matchId);
+    // Get role IDs for the teams
+    const homeTeam = db.getTeamById.get(match.home_team_id);
+    const awayTeam = db.getTeamById.get(match.away_team_id);
     const successEmbed = createSuccessEmbed('Match Rescheduled',
-      `**${match.home_team_name}** vs **${match.away_team_name}**\n` +
-      `New Time: ${unixToTimestamp(newTimestamp)}`);
+      `<@&${homeTeam.role_id}> ⚽ <@&${awayTeam.role_id}>\n` +
+      `🕐 New Time: ${unixToTimestamp(newTimestamp)}`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error rescheduling match:', error);
