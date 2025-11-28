@@ -32,7 +32,7 @@ const command = new SlashCommandBuilder()
           .setRequired(true)))
   .addSubcommand(subcommand =>
     subcommand
-      .setName('offer')
+      .setName('contract')
       .setDescription('Send a contract offer to a player')
       .addUserOption(option =>
         option.setName('player')
@@ -115,7 +115,7 @@ async function execute(interaction) {
       return handleCreate(interaction);
     case 'delete':
       return handleDelete(interaction);
-    case 'offer':
+    case 'contract':
       return handleOffer(interaction);
     case 'release':
       return handleRelease(interaction);
