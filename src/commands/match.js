@@ -11,13 +11,13 @@ const command = new SlashCommandBuilder()
     subcommand
       .setName('create')
       .setDescription('Create a new match')
-      .addStringOption(option =>
+      .addRoleOption(option =>
         option.setName('home')
-          .setDescription('Home team name')
+          .setDescription('Home team role')
           .setRequired(true))
-      .addStringOption(option =>
+      .addRoleOption(option =>
         option.setName('away')
-          .setDescription('Away team name')
+          .setDescription('Away team role')
           .setRequired(true))
       .addStringOption(option =>
         option.setName('stadium')
@@ -120,8 +120,8 @@ async function handleCreate(interaction) {
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
-  const homeName = interaction.options.getString('home');
-  const awayName = interaction.options.getString('away');
+  const homeRole = interaction.options.getRole('home');
+  const awayRole = interaction.options.getRole('away');
   const stadium = interaction.options.getString('stadium');
   const date = interaction.options.getString('date');
   const time = interaction.options.getString('time');
@@ -136,11 +136,11 @@ async function handleCreate(interaction) {
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
-  const homeTeam = db.getTeamByName.get(homeName);
-  const awayTeam = db.getTeamByName.get(awayName);
+  const homeTeam = db.getTeamByRoleId.get(homeRole.id);
+  const awayTeam = db.getTeamByRoleId.get(awayRole.id);
 
   if (!homeTeam || !awayTeam) {
-    const errorEmbed = createErrorEmbed('Team Not Found', 'One or both teams do not exist.');
+    const errorEmbed = createErrorEmbed('Team Not Found', 'One or both team roles do not correspond to existing teams.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
 
