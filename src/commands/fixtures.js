@@ -64,17 +64,29 @@ async function handlePost(interaction) {
   const embed = createFixturesEmbed(matches);
 
   try {
-    const message = await interaction.channel.send({ embeds: [embed] });
+    const fixturesChannelSetting = db.getSetting.get('fixtures_channel');
+    if (!fixturesChannelSetting) {
+      const errorEmbed = createErrorEmbed('Error', 'Fixtures channel has not been set. An admin must use `/fixtures setchannel` first.');
+      return interaction.editReply({ embeds: [errorEmbed] });
+    }
+
+    const channel = await interaction.client.channels.fetch(fixturesChannelSetting.value);
+    if (!channel) {
+      const errorEmbed = createErrorEmbed('Error', 'Fixtures channel not found.');
+      return interaction.editReply({ embeds: [errorEmbed] });
+    }
+
+    const message = await channel.send({ embeds: [embed] });
     
     // Update all matches to clear old fixtures message IDs and set the new one
     db.clearFixturesMessage.run();
     db.setFixturesMessage.run(message.id, matches[0].id);
     
-    const successEmbed = createSuccessEmbed('Fixtures Posted', `Posted ${matches.length} upcoming match(es).`);
+    const successEmbed = createSuccessEmbed('Fixtures Posted', `Posted ${matches.length} upcoming match(es) in <#${fixturesChannelSetting.value}>.`);
     return interaction.editReply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error posting fixtures:', error);
-    const errorEmbed = createErrorEmbed('Error', 'Failed to post fixtures.');
+    const errorEmbed = createErrorEmbed('Error', `Failed to post fixtures: ${error.message}`);
     return interaction.editReply({ embeds: [errorEmbed] });
   }
 }
