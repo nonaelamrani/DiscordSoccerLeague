@@ -803,6 +803,40 @@ async function handleAddPlayer(interaction) {
       console.error('Error adding role:', error);
     }
 
+    const transactionChannelSetting = db.getSetting.get('transactions_channel');
+    if (transactionChannelSetting) {
+      try {
+        const channel = await interaction.guild.channels.fetch(transactionChannelSetting.value);
+        if (channel) {
+          const { EmbedBuilder } = require('discord.js');
+          
+          let contractorName = 'Unknown';
+          try {
+            const contractorUser = await interaction.guild.members.fetch(interaction.user.id);
+            contractorName = contractorUser.user.username;
+          } catch (e) {
+            console.error('Error fetching admin:', e);
+          }
+          
+          const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('✅ Player Added')
+            .setDescription(`<@${playerUser.id}> has been added to **${team.name}**`)
+            .setThumbnail(playerUser.displayAvatarURL())
+            .addFields(
+              { name: 'Player', value: `<@${playerUser.id}>`, inline: true },
+              { name: 'Team', value: team.name, inline: true },
+              { name: 'Added by', value: contractorName, inline: true },
+              { name: 'Added on', value: new Date().toLocaleString(), inline: false }
+            )
+            .setTimestamp();
+          await channel.send({ embeds: [embed] });
+        }
+      } catch (error) {
+        console.error('Error logging transaction:', error);
+      }
+    }
+
     const successEmbed = createSuccessEmbed('Player Added', `<@${playerUser.id}> has been added to **${team.name}**.`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
@@ -842,6 +876,40 @@ async function handleRemovePlayer(interaction) {
       await member.roles.remove(teamRole.id);
     } catch (error) {
       console.error('Error removing role:', error);
+    }
+
+    const transactionChannelSetting = db.getSetting.get('transactions_channel');
+    if (transactionChannelSetting) {
+      try {
+        const channel = await interaction.guild.channels.fetch(transactionChannelSetting.value);
+        if (channel) {
+          const { EmbedBuilder } = require('discord.js');
+          
+          let contractorName = 'Unknown';
+          try {
+            const contractorUser = await interaction.guild.members.fetch(interaction.user.id);
+            contractorName = contractorUser.user.username;
+          } catch (e) {
+            console.error('Error fetching admin:', e);
+          }
+          
+          const embed = new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle('❌ Player Removed')
+            .setDescription(`<@${playerUser.id}> has been removed from **${team.name}**`)
+            .setThumbnail(playerUser.displayAvatarURL())
+            .addFields(
+              { name: 'Player', value: `<@${playerUser.id}>`, inline: true },
+              { name: 'Team', value: team.name, inline: true },
+              { name: 'Removed by', value: contractorName, inline: true },
+              { name: 'Removed on', value: new Date().toLocaleString(), inline: false }
+            )
+            .setTimestamp();
+          await channel.send({ embeds: [embed] });
+        }
+      } catch (error) {
+        console.error('Error logging transaction:', error);
+      }
     }
 
     const successEmbed = createSuccessEmbed('Player Removed', `<@${playerUser.id}> has been removed from **${team.name}**.`);
