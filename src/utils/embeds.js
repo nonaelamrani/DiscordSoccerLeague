@@ -128,6 +128,7 @@ function createRefereesEmbed(referees) {
 }
 
 function createFixturesEmbed(matches) {
+  const { unixToTimestamp, unixToDateString } = require('./timestamps');
   const embed = new EmbedBuilder()
     .setColor(0xFF6B00)
     .setTitle('📅 Upcoming Fixtures')
@@ -141,17 +142,18 @@ function createFixturesEmbed(matches) {
   // Group matches by date
   const matchesByDate = {};
   matches.forEach(match => {
-    if (!matchesByDate[match.match_date]) {
-      matchesByDate[match.match_date] = [];
+    const dateStr = unixToDateString(match.match_timestamp);
+    if (!matchesByDate[dateStr]) {
+      matchesByDate[dateStr] = [];
     }
-    matchesByDate[match.match_date].push(match);
+    matchesByDate[dateStr].push(match);
   });
 
   // Add fields for each date
   Object.keys(matchesByDate).sort().forEach(date => {
     const dateMatches = matchesByDate[date];
     const matchLines = dateMatches.map(m => 
-      `\`${m.match_time}\` **${m.home_team_short}** vs **${m.away_team_short}** @ ${m.stadium}`
+      `${unixToTimestamp(m.match_timestamp)} **${m.home_team_short}** vs **${m.away_team_short}** @ ${m.stadium}`
     ).join('\n');
     
     embed.addFields({

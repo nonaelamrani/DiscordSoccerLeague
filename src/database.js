@@ -65,8 +65,7 @@ db.exec(`
     home_team_id INTEGER NOT NULL,
     away_team_id INTEGER NOT NULL,
     stadium TEXT NOT NULL,
-    match_date TEXT NOT NULL,
-    match_time TEXT NOT NULL,
+    match_timestamp INTEGER NOT NULL,
     status TEXT DEFAULT 'scheduled' CHECK(status IN ('scheduled', 'cancelled')),
     cancel_reason TEXT,
     fixtures_message_id TEXT,
@@ -77,10 +76,18 @@ db.exec(`
   );
 `);
 
-// Add missing column to existing matches table if it doesn't exist
+// Add missing columns to existing matches table if they don't exist
 try {
   db.exec(`
     ALTER TABLE matches ADD COLUMN is_marked_done INTEGER DEFAULT 0;
+  `);
+} catch (error) {
+  // Column likely already exists, ignore the error
+}
+
+try {
+  db.exec(`
+    ALTER TABLE matches ADD COLUMN match_timestamp INTEGER;
   `);
 } catch (error) {
   // Column likely already exists, ignore the error
@@ -214,7 +221,7 @@ const getPlayerPendingOffers = db.prepare(`
 `);
 
 const createMatch = db.prepare(`
-  INSERT INTO matches (home_team_id, away_team_id, stadium, match_date, match_time) VALUES (?, ?, ?, ?, ?)
+  INSERT INTO matches (home_team_id, away_team_id, stadium, match_timestamp) VALUES (?, ?, ?, ?)
 `);
 
 const getMatch = db.prepare(`
@@ -226,7 +233,7 @@ const getMatch = db.prepare(`
 `);
 
 const updateMatch = db.prepare(`
-  UPDATE matches SET home_team_id = ?, away_team_id = ?, stadium = ?, match_date = ?, match_time = ? WHERE id = ?
+  UPDATE matches SET home_team_id = ?, away_team_id = ?, stadium = ?, match_timestamp = ? WHERE id = ?
 `);
 
 const cancelMatch = db.prepare(`
@@ -239,7 +246,7 @@ const getAllUpcomingMatches = db.prepare(`
   JOIN teams ht ON m.home_team_id = ht.id
   JOIN teams at ON m.away_team_id = at.id
   WHERE m.status = 'scheduled'
-  ORDER BY m.match_date ASC, m.match_time ASC
+  ORDER BY m.match_timestamp ASC
 `);
 
 const getFixturesMessage = db.prepare(`

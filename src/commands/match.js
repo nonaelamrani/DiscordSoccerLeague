@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
 const { createSuccessEmbed, createErrorEmbed } = require('../utils/embeds');
 const { isAdmin, isRefereeOrAdmin } = require('../utils/permissions');
+const { dateTimeToUnix, unixToTimestamp } = require('../utils/timestamps');
 
 const command = new SlashCommandBuilder()
   .setName('match')
@@ -117,11 +118,12 @@ async function handleCreate(interaction) {
   }
 
   try {
-    const result = db.createMatch.run(homeTeam.id, awayTeam.id, stadium, date, time);
+    const matchTimestamp = dateTimeToUnix(date, time);
+    const result = db.createMatch.run(homeTeam.id, awayTeam.id, stadium, matchTimestamp);
     const matchId = result.lastInsertRowid;
     const successEmbed = createSuccessEmbed('Match Created', 
       `**${homeTeam.name}** vs **${awayTeam.name}**\n` +
-      `Stadium: ${stadium}\nDate: ${date}\nTime: ${time}\n\n` +
+      `Stadium: ${stadium}\nTime: ${unixToTimestamp(matchTimestamp)}\n\n` +
       `**Match ID:** ${matchId}`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
@@ -150,8 +152,7 @@ async function handleEdit(interaction) {
   let homeTeamId = match.home_team_id;
   let awayTeamId = match.away_team_id;
   let stadium = match.stadium;
-  let matchDate = match.match_date;
-  let matchTime = match.match_time;
+  let matchTimestamp = match.match_timestamp;
 
   if (field === 'home') {
     const team = db.getTeamByName.get(value);
@@ -174,13 +175,22 @@ async function handleEdit(interaction) {
       const errorEmbed = createErrorEmbed('Invalid Date', 'Date must be in YYYY-MM-DD format.');
       return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
-    matchDate = value;
+    // Extract time from current timestamp and combine with new date
+    const currentDate = new Date(matchTimestamp * 1000);
+    const hours = String(currentDate.getUTCHours()).padStart(2, '0');
+    const minutes = String(currentDate.getUTCMinutes()).padStart(2, '0');
+    matchTimestamp = dateTimeToUnix(value, `${hours}:${minutes}`);
   } else if (field === 'time') {
     if (!/^\d{2}:\d{2}$/.test(value)) {
       const errorEmbed = createErrorEmbed('Invalid Time', 'Time must be in HH:MM format.');
       return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
-    matchTime = value;
+    // Extract date from current timestamp and combine with new time
+    const currentDate = new Date(matchTimestamp * 1000);
+    const year = currentDate.getUTCFullYear();
+    const month = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getUTCDate()).padStart(2, '0');
+    matchTimestamp = dateTimeToUnix(`${year}-${month}-${day}`, value);
   }
 
   if (homeTeamId === awayTeamId) {
@@ -189,11 +199,11 @@ async function handleEdit(interaction) {
   }
 
   try {
-    db.updateMatch.run(homeTeamId, awayTeamId, stadium, matchDate, matchTime, matchId);
+    db.updateMatch.run(homeTeamId, awayTeamId, stadium, matchTimestamp, matchId);
     const updatedMatch = db.getMatch.get(matchId);
     const successEmbed = createSuccessEmbed('Match Updated',
       `**${updatedMatch.home_team_name}** vs **${updatedMatch.away_team_name}**\n` +
-      `Stadium: ${updatedMatch.stadium}\nDate: ${updatedMatch.match_date}\nTime: ${updatedMatch.match_time}`);
+      `Stadium: ${updatedMatch.stadium}\nTime: ${unixToTimestamp(updatedMatch.match_timestamp)}`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error updating match:', error);
@@ -265,10 +275,11 @@ async function handleReschedule(interaction) {
   }
 
   try {
-    db.updateMatch.run(match.home_team_id, match.away_team_id, match.stadium, newDate, newTime, matchId);
+    const newTimestamp = dateTimeToUnix(newDate, newTime);
+    db.updateMatch.run(match.home_team_id, match.away_team_id, match.stadium, newTimestamp, matchId);
     const successEmbed = createSuccessEmbed('Match Rescheduled',
       `**${match.home_team_name}** vs **${match.away_team_name}**\n` +
-      `New Date: ${newDate}\nNew Time: ${newTime}`);
+      `New Time: ${unixToTimestamp(newTimestamp)}`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error rescheduling match:', error);
