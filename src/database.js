@@ -296,6 +296,10 @@ const deleteMatch = db.prepare(`
   DELETE FROM matches WHERE id = ?
 `);
 
+const deleteAllMatches = db.prepare(`
+  DELETE FROM matches
+`);
+
 module.exports = {
   db,
   createTeam,
@@ -343,5 +347,6 @@ module.exports = {
   incrementDemandUses,
   getPlayerDemandUses,
   getUnplayedMatches,
-  deleteMatch
+  deleteMatch,
+  deleteAllMatches
 };

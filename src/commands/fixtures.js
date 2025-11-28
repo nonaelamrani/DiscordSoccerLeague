@@ -80,11 +80,11 @@ async function handleDone(interaction) {
       console.log('Could not fetch or edit fixtures message:', err);
     }
     
-    // Delete all old matches (those without a fixtures_message_id)
-    db.deleteOldMatches.run();
+    // Delete all matches from database
+    db.deleteAllMatches.run();
     
     const successEmbed = createSuccessEmbed('Fixtures Archived', 
-      'Current fixtures have been archived and marked as done. The fixtures embed is now green. You can now post new fixtures.');
+      'Current fixtures have been archived and marked as done. The fixtures embed is now green. All matches have been deleted from the database. You can now post new fixtures.');
     return interaction.editReply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error marking fixtures as done:', error);
