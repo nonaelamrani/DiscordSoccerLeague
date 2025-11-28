@@ -55,8 +55,9 @@ src/
 - `/player info player` - Show player stats
 
 ### Referee Management
-- `/referee set user` - Add referee (Admin)
-- `/referee remove user` - Remove referee (Admin)
+- `/team setrefereerole role` - Set the global referee role (Admin) - **Must be set first!**
+- `/referee set user` - Add referee and give them the role (Admin)
+- `/referee remove user` - Remove referee and take away the role (Admin)
 - `/referee list` - List all referees
 
 ### Statistics (Referees/Admins)

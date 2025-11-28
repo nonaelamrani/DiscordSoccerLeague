@@ -85,6 +85,14 @@ const command = new SlashCommandBuilder()
       .addRoleOption(option =>
         option.setName('role')
           .setDescription('Team role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('setrefereerole')
+      .setDescription('Set the global referee role')
+      .addRoleOption(option =>
+        option.setName('role')
+          .setDescription('The referee role')
           .setRequired(true)));
 
 async function execute(interaction) {
@@ -107,6 +115,8 @@ async function execute(interaction) {
       return handleSetManagerRole(interaction);
     case 'removemanager':
       return handleRemoveManager(interaction);
+    case 'setrefereerole':
+      return handleSetRefereeRole(interaction);
   }
 }
 
@@ -418,6 +428,18 @@ async function handleRemoveManager(interaction) {
   }
 
   return interaction.reply({ embeds: [createSuccessEmbed('Manager Removed', `<@${managerId}> is no longer the manager of **${team.name}**.`)] });
+}
+
+async function handleSetRefereeRole(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can set the referee role.')], ephemeral: true });
+  }
+
+  const role = interaction.options.getRole('role');
+  
+  db.setSetting.run('referee_role', role.id);
+  
+  return interaction.reply({ embeds: [createSuccessEmbed('Referee Role Set', `${role} has been set as the global Referee role.`)] });
 }
 
 module.exports = { command, execute };

@@ -56,14 +56,16 @@ async function handleSet(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'This user is already a referee.')], ephemeral: true });
   }
 
+  const refereeRoleSetting = db.getSetting.get('referee_role');
+  if (!refereeRoleSetting) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Referee role has not been set. An admin must use `/team setrefereerole` first.')], ephemeral: true });
+  }
+
   db.addReferee.run(user.id);
 
   try {
     const member = await interaction.guild.members.fetch(user.id);
-    const refereeRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'referee');
-    if (refereeRole) {
-      await member.roles.add(refereeRole.id);
-    }
+    await member.roles.add(refereeRoleSetting.value);
   } catch (error) {
     console.error('Error adding referee role:', error);
   }
@@ -85,11 +87,12 @@ async function handleRemove(interaction) {
 
   db.removeReferee.run(user.id);
 
+  const refereeRoleSetting = db.getSetting.get('referee_role');
+
   try {
     const member = await interaction.guild.members.fetch(user.id);
-    const refereeRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'referee');
-    if (refereeRole) {
-      await member.roles.remove(refereeRole.id);
+    if (refereeRoleSetting) {
+      await member.roles.remove(refereeRoleSetting.value);
     }
   } catch (error) {
     console.error('Error removing referee role:', error);
