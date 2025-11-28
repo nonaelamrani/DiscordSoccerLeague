@@ -77,6 +77,15 @@ db.exec(`
   );
 `);
 
+// Add missing column to existing matches table if it doesn't exist
+try {
+  db.exec(`
+    ALTER TABLE matches ADD COLUMN is_marked_done INTEGER DEFAULT 0;
+  `);
+} catch (error) {
+  // Column likely already exists, ignore the error
+}
+
 const createTeam = db.prepare(`
   INSERT INTO teams (name, short, role_id, manager_id) VALUES (?, ?, ?, ?)
 `);
