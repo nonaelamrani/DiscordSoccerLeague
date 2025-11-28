@@ -190,30 +190,31 @@ async function handlePost(interaction) {
     try {
       const channel = await interaction.guild.channels.fetch(resultsChannelSetting.value);
       if (channel) {
-        const embed = new EmbedBuilder()
-          .setColor(0x0099FF)
-          .setTitle('⚽ Match Result')
-          .setDescription(`**${team1User.username}** ${score} **${team2User.username}**`)
-          .setThumbnail(motmUser.displayAvatarURL());
+        let resultText = `@everyone\n<@&@${team1User.id}> ⚽ VS 🏆 <@&@${team2User.id}>\n\n${score}\n\n`;
 
-        if (scorers.length > 0) {
-          const scorerList = scorers.map(s => `<@${s.player.id}> - **${s.goals}**`).join('\n');
-          embed.addFields({ name: 'Scorers', value: scorerList, inline: true });
+        if (scorers.length > 0 || assisters.length > 0) {
+          resultText += `**STATISTICS**\n`;
+          
+          for (const scorer of scorers) {
+            resultText += `⚽ | <@${scorer.player.id}> ${scorer.goals}\n`;
+          }
+
+          for (const assister of assisters) {
+            resultText += `🎯 | <@${assister.player.id}> ${assister.assists}\n`;
+          }
+          
+          resultText += `\n`;
         }
 
-        if (assisters.length > 0) {
-          const assisterList = assisters.map(a => `<@${a.player.id}> - **${a.assists}**`).join('\n');
-          embed.addFields({ name: 'Assisters', value: assisterList, inline: true });
-        }
+        resultText += `**MENTIONS**\n`;
+        resultText += `⚽ | <@${mention1.id}> 👑\n`;
+        resultText += `⚽ | <@${mention2.id}> 🏆\n`;
+        resultText += `⚽ | <@${mention3.id}> 💙\n\n`;
 
-        embed.addFields(
-          { name: 'Man of the Match', value: `<@${motmUser.id}>`, inline: false },
-          { name: 'Mentions', value: `<@${mention1.id}>\n<@${mention2.id}>\n<@${mention3.id}>`, inline: false }
-        )
-          .setFooter({ text: `Posted by ${interaction.user.username}` })
-          .setTimestamp();
+        resultText += `**OFFICIALS**\n`;
+        resultText += `⚽ | <@${interaction.user.id}>`;
 
-        await channel.send({ embeds: [embed] });
+        await channel.send(resultText);
       }
     } catch (error) {
       console.error('Error posting result:', error);
