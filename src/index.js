@@ -9,6 +9,7 @@ const playerCommand = require('./commands/player');
 const refereeCommand = require('./commands/referee');
 const statsCommand = require('./commands/stats');
 const resultsCommand = require('./commands/results');
+const fixturesCommand = require('./commands/fixtures');
 
 const client = new Client({
   intents: [
@@ -25,13 +26,15 @@ client.commands.set('player', playerCommand);
 client.commands.set('referee', refereeCommand);
 client.commands.set('stats', statsCommand);
 client.commands.set('results', resultsCommand);
+client.commands.set('fixtures', fixturesCommand);
 
 const commands = [
   teamCommand.command.toJSON(),
   playerCommand.command.toJSON(),
   refereeCommand.command.toJSON(),
   statsCommand.command.toJSON(),
-  resultsCommand.command.toJSON()
+  resultsCommand.command.toJSON(),
+  fixturesCommand.command.toJSON()
 ];
 
 client.once(Events.ClientReady, async (readyClient) => {
