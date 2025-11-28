@@ -154,7 +154,7 @@ function createFixturesEmbed(matches) {
   Object.keys(matchesByDate).sort().forEach(date => {
     const dateMatches = matchesByDate[date];
     const matchLines = dateMatches.map(m => 
-      `🕐 ${unixToTimestamp(m.match_timestamp)}\n**${m.home_team_short}** ⚽ **${m.away_team_short}**\n🏟️ ${m.stadium}`
+      `🕐 ${unixToTimestamp(m.match_timestamp)}\n<@&${m.home_team_role_id}> ⚽ <@&${m.away_team_role_id}>\n🏟️ ${m.stadium}`
     ).join('\n\n');
     
     embed.addFields({

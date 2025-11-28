@@ -232,7 +232,7 @@ const cancelMatch = db.prepare(`
 `);
 
 const getAllUpcomingMatches = db.prepare(`
-  SELECT m.*, ht.name as home_team_name, ht.short as home_team_short, at.name as away_team_name, at.short as away_team_short
+  SELECT m.*, ht.name as home_team_name, ht.short as home_team_short, ht.role_id as home_team_role_id, at.name as away_team_name, at.short as away_team_short, at.role_id as away_team_role_id
   FROM matches m
   JOIN teams ht ON m.home_team_id = ht.id
   JOIN teams at ON m.away_team_id = at.id
