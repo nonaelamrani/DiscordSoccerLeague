@@ -83,6 +83,15 @@ db.exec(`
     FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
     FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS assistant_managers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    discord_id TEXT NOT NULL,
+    team_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    UNIQUE(discord_id, team_id)
+  );
 `);
 
 // Add missing columns if they don't exist
@@ -319,6 +328,22 @@ const deleteAllMatches = db.prepare(`
   DELETE FROM matches
 `);
 
+const addAssistantManager = db.prepare(`
+  INSERT INTO assistant_managers (discord_id, team_id) VALUES (?, ?)
+`);
+
+const getTeamAssistantManagers = db.prepare(`
+  SELECT * FROM assistant_managers WHERE team_id = ?
+`);
+
+const removeAssistantManagerByDiscordId = db.prepare(`
+  DELETE FROM assistant_managers WHERE discord_id = ? AND team_id = ?
+`);
+
+const getAssistantManagerTeams = db.prepare(`
+  SELECT team_id FROM assistant_managers WHERE discord_id = ?
+`);
+
 module.exports = {
   db,
   createTeam,
@@ -370,5 +395,9 @@ module.exports = {
   getPlayerDemandUses,
   getUnplayedMatches,
   deleteMatch,
-  deleteAllMatches
+  deleteAllMatches,
+  addAssistantManager,
+  getTeamAssistantManagers,
+  removeAssistantManagerByDiscordId,
+  getAssistantManagerTeams
 };
