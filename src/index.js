@@ -158,13 +158,24 @@ async function handleButtonInteraction(interaction) {
           const channel = await client.channels.fetch(transactionChannelSetting.value);
           if (channel) {
             const { EmbedBuilder } = require('discord.js');
+            
+            let contractorName = 'Unknown';
+            try {
+              const contractorUser = await client.users.fetch(team.manager_id);
+              contractorName = contractorUser.username;
+            } catch (e) {
+              console.error('Error fetching contractor:', e);
+            }
+            
             const embed = new EmbedBuilder()
               .setColor(0x00FF00)
               .setTitle('✅ Contract Accepted')
               .setDescription(`<@${interaction.user.id}> has successfully signed with **${team.name}**`)
+              .setThumbnail(interaction.user.displayAvatarURL())
               .addFields(
                 { name: 'Signee', value: `<@${interaction.user.id}>`, inline: true },
                 { name: 'Team', value: team.name, inline: true },
+                { name: 'Contractor', value: contractorName, inline: true },
                 { name: 'Position', value: offer.position, inline: true },
                 { name: 'Salary', value: offer.salary, inline: true },
                 { name: 'Duration', value: offer.duration, inline: true },
