@@ -29,7 +29,8 @@ db.exec(`
     goals INTEGER DEFAULT 0,
     assists INTEGER DEFAULT 0,
     mentions INTEGER DEFAULT 0,
-    motm INTEGER DEFAULT 0
+    motm INTEGER DEFAULT 0,
+    demand_uses INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS memberships (
@@ -83,6 +84,12 @@ db.exec(`
   );
 `);
 
+// Add missing column to players table if it doesn't exist
+try {
+  db.exec(`ALTER TABLE players ADD COLUMN demand_uses INTEGER DEFAULT 0;`);
+} catch (error) {
+  // Column likely already exists, ignore the error
+}
 
 const createTeam = db.prepare(`
   INSERT INTO teams (name, short, role_id, manager_id) VALUES (?, ?, ?, ?)
@@ -268,6 +275,14 @@ const isFixturesMessageDone = db.prepare(`
   SELECT is_marked_done FROM matches WHERE fixtures_message_id IS NOT NULL LIMIT 1
 `);
 
+const incrementDemandUses = db.prepare(`
+  UPDATE players SET demand_uses = demand_uses + 1 WHERE discord_id = ?
+`);
+
+const getPlayerDemandUses = db.prepare(`
+  SELECT demand_uses FROM players WHERE discord_id = ?
+`);
+
 module.exports = {
   db,
   createTeam,
@@ -311,5 +326,7 @@ module.exports = {
   markFixturesAsDone,
   deleteOldMatches,
   getLastFixturesMessage,
-  isFixturesMessageDone
+  isFixturesMessageDone,
+  incrementDemandUses,
+  getPlayerDemandUses
 };

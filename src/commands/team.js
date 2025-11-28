@@ -105,6 +105,34 @@ const command = new SlashCommandBuilder()
       .addChannelOption(option =>
         option.setName('channel')
           .setDescription('Channel to log transactions')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('demand')
+      .setDescription('Force release yourself from a team (Max 2 uses per player)'))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('addplayer')
+      .setDescription('Add a player to a team without an offer (Admin only)')
+      .addUserOption(option =>
+        option.setName('player')
+          .setDescription('Player to add')
+          .setRequired(true))
+      .addRoleOption(option =>
+        option.setName('team')
+          .setDescription('Team role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('removeplayer')
+      .setDescription('Remove a player from a team (Admin only)')
+      .addUserOption(option =>
+        option.setName('player')
+          .setDescription('Player to remove')
+          .setRequired(true))
+      .addRoleOption(option =>
+        option.setName('team')
+          .setDescription('Team role')
           .setRequired(true)));
 
 async function execute(interaction) {
@@ -131,6 +159,12 @@ async function execute(interaction) {
       return handleSetRefereeRole(interaction);
     case 'transactionschannel':
       return handleTransactionsChannel(interaction);
+    case 'demand':
+      return handleDemand(interaction);
+    case 'addplayer':
+      return handleAddPlayer(interaction);
+    case 'removeplayer':
+      return handleRemovePlayer(interaction);
   }
 }
 
@@ -530,6 +564,148 @@ async function handleTransactionsChannel(interaction) {
   db.setSetting.run('transactions_channel', channel.id);
   
   return interaction.reply({ embeds: [createSuccessEmbed('Transactions Channel Set', `${channel} has been set as the channel for logging contract transactions.`)] });
+}
+
+async function handleDemand(interaction) {
+  const player = db.getPlayer.get(interaction.user.id);
+
+  if (!player) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not in the player database.')], ephemeral: true });
+  }
+
+  // Check if player has already used demand twice
+  const demandUses = db.getPlayerDemandUses.get(interaction.user.id);
+  if (demandUses && demandUses.demand_uses >= 2) {
+    return interaction.reply({ embeds: [createErrorEmbed('Limit Reached', 'You have already used your 2 allowed demands. Contact an admin if you need further assistance.')], ephemeral: true });
+  }
+
+  // Check if player is a manager
+  const isManager = db.getTeamByManagerId.get(interaction.user.id);
+  if (isManager) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Managers cannot use the demand command.')], ephemeral: true });
+  }
+
+  // Get player's team
+  const playerTeams = db.getPlayerTeams.all(player.id);
+  if (playerTeams.length === 0) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not part of any team.')], ephemeral: true });
+  }
+
+  const team = playerTeams[0];
+
+  try {
+    db.removeMembership.run(player.id, team.id);
+    db.incrementDemandUses.run(interaction.user.id);
+
+    try {
+      const member = await interaction.guild.members.fetch(interaction.user.id);
+      await member.roles.remove(team.role_id);
+    } catch (error) {
+      console.error('Error removing role:', error);
+    }
+
+    const successEmbed = createSuccessEmbed('Released from Team', 
+      `You have been released from **${team.name}**.\n\n` +
+      `Demands used: ${(demandUses?.demand_uses || 0) + 1}/2`);
+    return interaction.reply({ embeds: [successEmbed], ephemeral: true });
+  } catch (error) {
+    console.error('Error processing demand:', error);
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Failed to process demand.')], ephemeral: true });
+  }
+}
+
+async function handleAddPlayer(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can add players to teams.')], ephemeral: true });
+  }
+
+  const playerUser = interaction.options.getUser('player');
+  const teamRole = interaction.options.getRole('team');
+
+  if (playerUser.bot) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot add bots to teams.')], ephemeral: true });
+  }
+
+  // Check if target is a manager
+  const isManager = db.getTeamByManagerId.get(playerUser.id);
+  if (isManager) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${playerUser.id}> is a manager and cannot be added as a player.`)], ephemeral: true });
+  }
+
+  // Check if target is already signed
+  const playerRecord = db.getPlayer.get(playerUser.id);
+  if (playerRecord) {
+    const existingTeams = db.getPlayerTeams.all(playerRecord.id);
+    if (existingTeams.length > 0) {
+      const teamList = existingTeams.map(t => `**${t.name}**`).join(', ');
+      return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${playerUser.id}> is already signed to ${teamList}.`)], ephemeral: true });
+    }
+  }
+
+  const team = db.getTeamByRoleId.get(teamRole.id);
+  if (!team) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
+  }
+
+  try {
+    db.createOrUpdatePlayer.run(playerUser.id, playerUser.username);
+    const playerDb = db.getPlayer.get(playerUser.id);
+    db.addMembership.run(playerDb.id, team.id, 'player', null, null);
+
+    try {
+      const member = await interaction.guild.members.fetch(playerUser.id);
+      await member.roles.add(teamRole.id);
+    } catch (error) {
+      console.error('Error adding role:', error);
+    }
+
+    const successEmbed = createSuccessEmbed('Player Added', `<@${playerUser.id}> has been added to **${team.name}**.`);
+    return interaction.reply({ embeds: [successEmbed] });
+  } catch (error) {
+    console.error('Error adding player:', error);
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Failed to add player to team.')], ephemeral: true });
+  }
+}
+
+async function handleRemovePlayer(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can remove players from teams.')], ephemeral: true });
+  }
+
+  const playerUser = interaction.options.getUser('player');
+  const teamRole = interaction.options.getRole('team');
+
+  const team = db.getTeamByRoleId.get(teamRole.id);
+  if (!team) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
+  }
+
+  const playerRecord = db.getPlayer.get(playerUser.id);
+  if (!playerRecord) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Player not found in database.')], ephemeral: true });
+  }
+
+  const membership = db.getMembership.get(playerRecord.id, team.id);
+  if (!membership) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${playerUser.id}> is not part of **${team.name}**.`)], ephemeral: true });
+  }
+
+  try {
+    db.removeMembership.run(playerRecord.id, team.id);
+
+    try {
+      const member = await interaction.guild.members.fetch(playerUser.id);
+      await member.roles.remove(teamRole.id);
+    } catch (error) {
+      console.error('Error removing role:', error);
+    }
+
+    const successEmbed = createSuccessEmbed('Player Removed', `<@${playerUser.id}> has been removed from **${team.name}**.`);
+    return interaction.reply({ embeds: [successEmbed] });
+  } catch (error) {
+    console.error('Error removing player:', error);
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Failed to remove player from team.')], ephemeral: true });
+  }
 }
 
 module.exports = { command, execute };
