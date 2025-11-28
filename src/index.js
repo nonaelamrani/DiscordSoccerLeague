@@ -151,6 +151,31 @@ async function handleButtonInteraction(interaction) {
       }
       
       db.deletePendingOffer.run(interaction.message.id);
+
+      const transactionChannelSetting = db.getSetting.get('transactions_channel');
+      if (transactionChannelSetting) {
+        try {
+          const channel = await client.channels.fetch(transactionChannelSetting.value);
+          if (channel) {
+            const { EmbedBuilder } = require('discord.js');
+            const embed = new EmbedBuilder()
+              .setColor(0x00FF00)
+              .setTitle('✅ Contract Accepted')
+              .setDescription(`<@${interaction.user.id}> has successfully signed with **${team.name}**`)
+              .addFields(
+                { name: 'Signee', value: `<@${interaction.user.id}>`, inline: true },
+                { name: 'Team', value: team.name, inline: true },
+                { name: 'Salary', value: offer.salary, inline: true },
+                { name: 'Duration', value: offer.duration, inline: true },
+                { name: 'Signed on', value: new Date().toLocaleString(), inline: false }
+              )
+              .setTimestamp();
+            await channel.send({ embeds: [embed] });
+          }
+        } catch (error) {
+          console.error('Error logging transaction:', error);
+        }
+      }
       
       return interaction.update({
         embeds: [createSuccessEmbed('Contract Accepted', `You have joined **${team.name}**!\n\nSalary: ${offer.salary}\nDuration: ${offer.duration}`)],

@@ -93,6 +93,14 @@ const command = new SlashCommandBuilder()
       .addRoleOption(option =>
         option.setName('role')
           .setDescription('The referee role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('transactionschannel')
+      .setDescription('Set the channel for logging contract transactions')
+      .addChannelOption(option =>
+        option.setName('channel')
+          .setDescription('Channel to log transactions')
           .setRequired(true)));
 
 async function execute(interaction) {
@@ -117,6 +125,8 @@ async function execute(interaction) {
       return handleRemoveManager(interaction);
     case 'setrefereerole':
       return handleSetRefereeRole(interaction);
+    case 'transactionschannel':
+      return handleTransactionsChannel(interaction);
   }
 }
 
@@ -440,6 +450,18 @@ async function handleSetRefereeRole(interaction) {
   db.setSetting.run('referee_role', role.id);
   
   return interaction.reply({ embeds: [createSuccessEmbed('Referee Role Set', `${role} has been set as the global Referee role.`)] });
+}
+
+async function handleTransactionsChannel(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can set the transactions channel.')], ephemeral: true });
+  }
+
+  const channel = interaction.options.getChannel('channel');
+  
+  db.setSetting.run('transactions_channel', channel.id);
+  
+  return interaction.reply({ embeds: [createSuccessEmbed('Transactions Channel Set', `${channel} has been set as the channel for logging contract transactions.`)] });
 }
 
 module.exports = { command, execute };
