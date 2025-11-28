@@ -12,6 +12,10 @@ const command = new SlashCommandBuilder()
       .setDescription('Post an embed of all upcoming matches grouped by date'))
   .addSubcommand(subcommand =>
     subcommand
+      .setName('done')
+      .setDescription('Mark fixtures as done, archive them, and remove old matches'))
+  .addSubcommand(subcommand =>
+    subcommand
       .setName('remove')
       .setDescription('Delete the posted fixtures embed'));
 
@@ -48,6 +52,38 @@ async function handlePost(interaction) {
   }
 }
 
+async function handleDone(interaction) {
+  if (!isRefereeOrAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can mark fixtures as done.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  await interaction.deferReply();
+
+  try {
+    const fixturesData = db.getFixturesMessage.get();
+    
+    if (!fixturesData || !fixturesData.fixtures_message_id) {
+      const errorEmbed = createErrorEmbed('No Fixtures', 'No fixtures message has been posted.');
+      return interaction.editReply({ embeds: [errorEmbed] });
+    }
+
+    // Mark current fixtures as done
+    db.markFixturesAsDone.run();
+    
+    // Delete all old matches (those without a fixtures_message_id)
+    db.deleteOldMatches.run();
+    
+    const successEmbed = createSuccessEmbed('Fixtures Archived', 
+      'Current fixtures have been archived and old matches have been removed. You can now post new fixtures.');
+    return interaction.editReply({ embeds: [successEmbed] });
+  } catch (error) {
+    console.error('Error marking fixtures as done:', error);
+    const errorEmbed = createErrorEmbed('Error', 'Failed to archive fixtures.');
+    return interaction.editReply({ embeds: [errorEmbed] });
+  }
+}
+
 async function handleRemove(interaction) {
   if (!isRefereeOrAdmin(interaction.member)) {
     const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can remove fixtures.');
@@ -61,6 +97,13 @@ async function handleRemove(interaction) {
     
     if (!fixturesData || !fixturesData.fixtures_message_id) {
       const errorEmbed = createErrorEmbed('No Fixtures', 'No fixtures message has been posted.');
+      return interaction.editReply({ embeds: [errorEmbed] });
+    }
+
+    // Check if fixtures are marked as done (protected)
+    const isDone = db.isFixturesMessageDone.get();
+    if (isDone && isDone.is_marked_done) {
+      const errorEmbed = createErrorEmbed('Protected', 'This fixtures embed is archived and protected. It cannot be deleted.');
       return interaction.editReply({ embeds: [errorEmbed] });
     }
 
@@ -89,6 +132,8 @@ async function execute(interaction) {
   switch (subcommand) {
     case 'post':
       return handlePost(interaction);
+    case 'done':
+      return handleDone(interaction);
     case 'remove':
       return handleRemove(interaction);
   }

@@ -70,6 +70,7 @@ db.exec(`
     status TEXT DEFAULT 'scheduled' CHECK(status IN ('scheduled', 'cancelled')),
     cancel_reason TEXT,
     fixtures_message_id TEXT,
+    is_marked_done INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
     FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE
@@ -244,6 +245,22 @@ const clearFixturesMessage = db.prepare(`
   UPDATE matches SET fixtures_message_id = NULL
 `);
 
+const markFixturesAsDone = db.prepare(`
+  UPDATE matches SET is_marked_done = 1 WHERE fixtures_message_id IS NOT NULL
+`);
+
+const deleteOldMatches = db.prepare(`
+  DELETE FROM matches WHERE fixtures_message_id IS NULL
+`);
+
+const getLastFixturesMessage = db.prepare(`
+  SELECT * FROM matches WHERE fixtures_message_id IS NOT NULL AND is_marked_done = 1 LIMIT 1
+`);
+
+const isFixturesMessageDone = db.prepare(`
+  SELECT is_marked_done FROM matches WHERE fixtures_message_id IS NOT NULL LIMIT 1
+`);
+
 module.exports = {
   db,
   createTeam,
@@ -283,5 +300,9 @@ module.exports = {
   getAllUpcomingMatches,
   getFixturesMessage,
   setFixturesMessage,
-  clearFixturesMessage
+  clearFixturesMessage,
+  markFixturesAsDone,
+  deleteOldMatches,
+  getLastFixturesMessage,
+  isFixturesMessageDone
 };
