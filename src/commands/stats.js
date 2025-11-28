@@ -159,6 +159,11 @@ async function handleAddGoal(interaction) {
   }
 
   const playerUser = interaction.options.getUser('player');
+  
+  if (playerUser.bot) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot add stats to bots.')], ephemeral: true });
+  }
+
   db.createOrUpdatePlayer.run(playerUser.id, playerUser.username);
   const player = db.getPlayer.get(playerUser.id);
   
@@ -196,6 +201,11 @@ async function handleAddAssist(interaction) {
   }
 
   const playerUser = interaction.options.getUser('player');
+  
+  if (playerUser.bot) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot add stats to bots.')], ephemeral: true });
+  }
+
   db.createOrUpdatePlayer.run(playerUser.id, playerUser.username);
   const player = db.getPlayer.get(playerUser.id);
   
@@ -235,7 +245,12 @@ async function handleAddMention(interaction) {
   const players = [];
   for (let i = 1; i <= 5; i++) {
     const player = interaction.options.getUser(`player${i}`);
-    if (player) players.push(player);
+    if (player) {
+      if (player.bot) {
+        return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot add stats to bots.')], ephemeral: true });
+      }
+      players.push(player);
+    }
   }
 
   const results = [];
@@ -280,6 +295,11 @@ async function handleAddMotm(interaction) {
   }
 
   const playerUser = interaction.options.getUser('player');
+  
+  if (playerUser.bot) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot add stats to bots.')], ephemeral: true });
+  }
+
   db.createOrUpdatePlayer.run(playerUser.id, playerUser.username);
   const player = db.getPlayer.get(playerUser.id);
   
@@ -313,6 +333,11 @@ async function handleRemoveMotm(interaction) {
 
 async function handlePlayerStats(interaction) {
   const playerUser = interaction.options.getUser('player');
+  
+  if (playerUser.bot) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot view stats for bots.')], ephemeral: true });
+  }
+
   let player = db.getPlayer.get(playerUser.id);
 
   if (!player) {

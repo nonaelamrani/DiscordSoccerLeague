@@ -595,6 +595,12 @@ async function handleDemand(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not in the player database.')], ephemeral: true });
   }
 
+  // Check if user is a manager (cannot demand)
+  const isManager = db.getTeamByManagerId.get(interaction.user.id);
+  if (isManager) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Managers cannot use the demand command.')], ephemeral: true });
+  }
+
   // Check transaction window
   const transactionWindowSetting = db.getSetting.get('transaction_window_open');
   const isWindowOpen = transactionWindowSetting && transactionWindowSetting.value === 'true';
@@ -605,12 +611,6 @@ async function handleDemand(interaction) {
     if (demandUses && demandUses.demand_uses >= 2) {
       return interaction.reply({ embeds: [createErrorEmbed('Limit Reached', 'You have already used your 2 allowed demands. Contact an admin if you need further assistance.')], ephemeral: true });
     }
-  }
-
-  // Check if player is a manager
-  const isManager = db.getTeamByManagerId.get(interaction.user.id);
-  if (isManager) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Managers cannot use the demand command.')], ephemeral: true });
   }
 
   // Get player's team

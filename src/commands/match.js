@@ -400,7 +400,7 @@ async function handleList(interaction) {
 
   const matches = db.getUnplayedMatches.all();
   
-  if (matches.length === 0) {
+  if (!Array.isArray(matches) || matches.length === 0) {
     const errorEmbed = createErrorEmbed('No Matches', 'There are no unplayed matches.');
     return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
   }
@@ -426,6 +426,12 @@ async function handleDone(interaction) {
   }
 
   const matchId = interaction.options.getInteger('match_id');
+  
+  if (!Number.isInteger(matchId) || matchId <= 0) {
+    const errorEmbed = createErrorEmbed('Invalid ID', 'Match ID must be a positive integer.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
   const match = db.getMatch.get(matchId);
 
   if (!match) {
