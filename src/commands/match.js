@@ -117,10 +117,12 @@ async function handleCreate(interaction) {
   }
 
   try {
-    db.createMatch.run(homeTeam.id, awayTeam.id, stadium, date, time);
+    const result = db.createMatch.run(homeTeam.id, awayTeam.id, stadium, date, time);
+    const matchId = result.lastInsertRowid;
     const successEmbed = createSuccessEmbed('Match Created', 
       `**${homeTeam.name}** vs **${awayTeam.name}**\n` +
-      `Stadium: ${stadium}\nDate: ${date}\nTime: ${time}`);
+      `Stadium: ${stadium}\nDate: ${date}\nTime: ${time}\n\n` +
+      `**Match ID:** ${matchId}`);
     return interaction.reply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error creating match:', error);
