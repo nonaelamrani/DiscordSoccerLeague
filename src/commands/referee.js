@@ -65,12 +65,21 @@ async function handleSet(interaction) {
 
   try {
     const member = await interaction.guild.members.fetch(user.id);
-    await member.roles.add(refereeRoleSetting.value);
+    const roleId = refereeRoleSetting.value;
+    console.log(`Adding referee role ${roleId} to user ${user.id}`);
+    
+    if (!roleId) {
+      return interaction.reply({ embeds: [createErrorEmbed('Error', 'Referee role ID is invalid. Please use `/team setrefereerole` to set it again.')], ephemeral: true });
+    }
+    
+    await member.roles.add(roleId);
+    console.log(`Successfully added referee role to ${user.id}`);
   } catch (error) {
     console.error('Error adding referee role:', error);
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `Failed to add referee role: ${error.message}`)], ephemeral: true });
   }
 
-  return interaction.reply({ embeds: [createSuccessEmbed('Referee Added', `<@${user.id}> is now a referee.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Referee Added', `<@${user.id}> is now a referee and has been given the Referee role.`)] });
 }
 
 async function handleRemove(interaction) {
