@@ -323,6 +323,12 @@ async function handleRelease(interaction) {
   }
 
   const playerUser = interaction.options.getUser('player');
+  
+  // Prevent self-targeting
+  if (playerUser.id === interaction.user.id) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'You cannot release yourself from a team.')], ephemeral: true });
+  }
+
   const player = db.getPlayer.get(playerUser.id);
 
   if (!player) {

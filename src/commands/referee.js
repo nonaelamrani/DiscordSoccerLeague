@@ -56,6 +56,22 @@ async function handleSet(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'This user is already a referee.')], ephemeral: true });
   }
 
+  // Check if user is a manager of any team
+  const isManager = db.getTeamByManagerId.get(user.id);
+  if (isManager) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${user.id}> is a manager of **${isManager.name}** and cannot be a referee.`)], ephemeral: true });
+  }
+
+  // Check if user is a player on any team
+  const playerRecord = db.getPlayer.get(user.id);
+  if (playerRecord) {
+    const playerTeams = db.getPlayerTeams.all(playerRecord.id);
+    if (playerTeams.length > 0) {
+      const teamList = playerTeams.map(t => `**${t.name}**`).join(', ');
+      return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${user.id}> is a player on ${teamList} and cannot be a referee.`)], ephemeral: true });
+    }
+  }
+
   const refereeRoleSetting = db.getSetting.get('referee_role');
   if (!refereeRoleSetting) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'Referee role has not been set. An admin must use `/team setrefereerole` first.')], ephemeral: true });
