@@ -131,7 +131,8 @@ function createFixturesEmbed(matches) {
   const { unixToTimestamp, unixToDateString } = require('./timestamps');
   const embed = new EmbedBuilder()
     .setColor(0xFF6B00)
-    .setTitle('📅 Upcoming Fixtures')
+    .setTitle('⚽ UPCOMING FIXTURES ⚽')
+    .setDescription('━━━━━━━━━━━━━━━━━━━━━━')
     .setTimestamp();
 
   if (matches.length === 0) {
@@ -153,16 +154,17 @@ function createFixturesEmbed(matches) {
   Object.keys(matchesByDate).sort().forEach(date => {
     const dateMatches = matchesByDate[date];
     const matchLines = dateMatches.map(m => 
-      `${unixToTimestamp(m.match_timestamp)} **${m.home_team_short}** vs **${m.away_team_short}** @ ${m.stadium}`
-    ).join('\n');
+      `🕐 ${unixToTimestamp(m.match_timestamp)}\n**${m.home_team_short}** ⚽ **${m.away_team_short}**\n🏟️ ${m.stadium}`
+    ).join('\n\n');
     
     embed.addFields({
-      name: date,
+      name: `📅 ${date}`,
       value: matchLines,
       inline: false
     });
   });
 
+  embed.setFooter({ text: '⚽ All times shown in your local timezone ⚽' });
   return embed;
 }
 
