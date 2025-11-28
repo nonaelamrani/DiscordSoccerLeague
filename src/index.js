@@ -40,12 +40,26 @@ client.once(Events.ClientReady, async (readyClient) => {
     console.log('Started refreshing application (/) commands.');
     
     if (process.env.GUILD_ID) {
+      console.log('Clearing old guild commands...');
+      await rest.put(
+        Routes.applicationGuildCommands(readyClient.user.id, process.env.GUILD_ID),
+        { body: [] }
+      );
+      
+      console.log('Registering new guild commands...');
       await rest.put(
         Routes.applicationGuildCommands(readyClient.user.id, process.env.GUILD_ID),
         { body: commands }
       );
       console.log(`Successfully registered commands for guild ${process.env.GUILD_ID}`);
     } else {
+      console.log('Clearing old global commands...');
+      await rest.put(
+        Routes.applicationCommands(readyClient.user.id),
+        { body: [] }
+      );
+      
+      console.log('Registering new global commands...');
       await rest.put(
         Routes.applicationCommands(readyClient.user.id),
         { body: commands }
