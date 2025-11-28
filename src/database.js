@@ -19,16 +19,8 @@ db.exec(`
     short TEXT NOT NULL,
     role_id TEXT NOT NULL UNIQUE,
     manager_id TEXT,
+    assistant_manager_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS assistant_managers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    team_id INTEGER NOT NULL,
-    discord_id TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-    UNIQUE(team_id, discord_id)
   );
 
   CREATE TABLE IF NOT EXISTS players (
@@ -101,18 +93,9 @@ try {
 }
 
 try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS assistant_managers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      team_id INTEGER NOT NULL,
-      discord_id TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-      UNIQUE(team_id, discord_id)
-    );
-  `);
+  db.exec(`ALTER TABLE teams ADD COLUMN assistant_manager_id TEXT;`);
 } catch (error) {
-  // Table likely already exists, ignore the error
+  // Column likely already exists, ignore the error
 }
 
 const createTeam = db.prepare(`
@@ -151,26 +134,16 @@ const clearTeamManager = db.prepare(`
   UPDATE teams SET manager_id = NULL WHERE id = ?
 `);
 
-const addAssistantManager = db.prepare(`
-  INSERT INTO assistant_managers (team_id, discord_id) VALUES (?, ?)
+const setTeamAssistantManager = db.prepare(`
+  UPDATE teams SET assistant_manager_id = ? WHERE id = ?
 `);
 
-const removeAssistantManager = db.prepare(`
-  DELETE FROM assistant_managers WHERE team_id = ? AND discord_id = ?
+const getTeamByAssistantManagerId = db.prepare(`
+  SELECT * FROM teams WHERE assistant_manager_id = ?
 `);
 
-const getTeamAssistantManagers = db.prepare(`
-  SELECT discord_id FROM assistant_managers WHERE team_id = ? ORDER BY created_at ASC
-`);
-
-const getAssistantManagerTeams = db.prepare(`
-  SELECT DISTINCT t.* FROM teams t
-  JOIN assistant_managers am ON t.id = am.team_id
-  WHERE am.discord_id = ?
-`);
-
-const getAssistantManagerCount = db.prepare(`
-  SELECT COUNT(*) as count FROM assistant_managers WHERE team_id = ?
+const clearTeamAssistantManager = db.prepare(`
+  UPDATE teams SET assistant_manager_id = NULL WHERE id = ?
 `);
 
 const createOrUpdatePlayer = db.prepare(`
@@ -357,11 +330,9 @@ module.exports = {
   getTeamByManagerId,
   getTeamByName,
   clearTeamManager,
-  addAssistantManager,
-  removeAssistantManager,
-  getTeamAssistantManagers,
-  getAssistantManagerTeams,
-  getAssistantManagerCount,
+  setTeamAssistantManager,
+  getTeamByAssistantManagerId,
+  clearTeamAssistantManager,
   createOrUpdatePlayer,
   getPlayer,
   getPlayerById,
