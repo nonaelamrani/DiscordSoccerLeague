@@ -283,6 +283,19 @@ const getPlayerDemandUses = db.prepare(`
   SELECT demand_uses FROM players WHERE discord_id = ?
 `);
 
+const getUnplayedMatches = db.prepare(`
+  SELECT m.*, ht.name as home_team_name, ht.short as home_team_short, ht.role_id as home_team_role_id, at.name as away_team_name, at.short as away_team_short, at.role_id as away_team_role_id
+  FROM matches m
+  JOIN teams ht ON m.home_team_id = ht.id
+  JOIN teams at ON m.away_team_id = at.id
+  WHERE m.status = 'scheduled' AND m.is_marked_done = 0
+  ORDER BY m.match_timestamp ASC
+`);
+
+const deleteMatch = db.prepare(`
+  DELETE FROM matches WHERE id = ?
+`);
+
 module.exports = {
   db,
   createTeam,
@@ -328,5 +341,7 @@ module.exports = {
   getLastFixturesMessage,
   isFixturesMessageDone,
   incrementDemandUses,
-  getPlayerDemandUses
+  getPlayerDemandUses,
+  getUnplayedMatches,
+  deleteMatch
 };

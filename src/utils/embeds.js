@@ -168,6 +168,16 @@ function createFixturesEmbed(matches) {
   return embed;
 }
 
+function createFixturesDoneEmbed() {
+  const embed = new EmbedBuilder()
+    .setColor(0x00FF00)
+    .setTitle('✅ FIXTURES COMPLETED ✅')
+    .setDescription('All fixtures have been completed and archived.')
+    .setTimestamp();
+  
+  return embed;
+}
+
 module.exports = {
   createSuccessEmbed,
   createErrorEmbed,
@@ -178,5 +188,6 @@ module.exports = {
   createTopScorersEmbed,
   createTopPlaymakersEmbed,
   createRefereesEmbed,
-  createFixturesEmbed
+  createFixturesEmbed,
+  createFixturesDoneEmbed
 };

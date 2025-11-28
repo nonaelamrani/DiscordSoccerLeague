@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const db = require('../database');
-const { createSuccessEmbed, createErrorEmbed, createFixturesEmbed } = require('../utils/embeds');
+const { createSuccessEmbed, createErrorEmbed, createFixturesEmbed, createFixturesDoneEmbed } = require('../utils/embeds');
 const { isAdmin, isRefereeOrAdmin } = require('../utils/permissions');
 
 const command = new SlashCommandBuilder()
@@ -71,11 +71,20 @@ async function handleDone(interaction) {
     // Mark current fixtures as done
     db.markFixturesAsDone.run();
     
+    // Update the fixtures embed to show green and mark as done
+    try {
+      const message = await interaction.channel.messages.fetch(fixturesData.fixtures_message_id);
+      const doneEmbed = createFixturesDoneEmbed();
+      await message.edit({ embeds: [doneEmbed] });
+    } catch (err) {
+      console.log('Could not fetch or edit fixtures message:', err);
+    }
+    
     // Delete all old matches (those without a fixtures_message_id)
     db.deleteOldMatches.run();
     
     const successEmbed = createSuccessEmbed('Fixtures Archived', 
-      'Current fixtures have been archived and old matches have been removed. You can now post new fixtures.');
+      'Current fixtures have been archived and marked as done. The fixtures embed is now green. You can now post new fixtures.');
     return interaction.editReply({ embeds: [successEmbed] });
   } catch (error) {
     console.error('Error marking fixtures as done:', error);

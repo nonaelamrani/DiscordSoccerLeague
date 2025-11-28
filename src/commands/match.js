@@ -100,6 +100,18 @@ const command = new SlashCommandBuilder()
       .addStringOption(option =>
         option.setName('link')
           .setDescription('Link to the match (stream, ticket, etc)')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('list')
+      .setDescription('List all unplayed matches (Admin & Referee only)'))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('done')
+      .setDescription('Mark a match as done and delete it (Admin & Referee only)')
+      .addIntegerOption(option =>
+        option.setName('match_id')
+          .setDescription('Match ID to mark as done')
           .setRequired(true)));
 
 async function handleCreate(interaction) {
@@ -380,6 +392,59 @@ async function handleShout(interaction) {
   }
 }
 
+async function handleList(interaction) {
+  if (!isRefereeOrAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can list matches.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  const matches = db.getUnplayedMatches.all();
+  
+  if (matches.length === 0) {
+    const errorEmbed = createErrorEmbed('No Matches', 'There are no unplayed matches.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  const { unixToTimestamp } = require('../utils/timestamps');
+  const matchList = matches.map(m => 
+    `**ID: ${m.id}** - <@&${m.home_team_role_id}> vs <@&${m.away_team_role_id}>\n🕐 ${unixToTimestamp(m.match_timestamp)} | 🏟️ ${m.stadium}`
+  ).join('\n\n');
+
+  const embed = new (require('discord.js')).EmbedBuilder()
+    .setColor(0x0099FF)
+    .setTitle('📋 Unplayed Matches')
+    .setDescription(matchList)
+    .setTimestamp();
+
+  return interaction.reply({ embeds: [embed], ephemeral: true });
+}
+
+async function handleDone(interaction) {
+  if (!isRefereeOrAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can mark matches as done.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  const matchId = interaction.options.getInteger('match_id');
+  const match = db.getMatch.get(matchId);
+
+  if (!match) {
+    const errorEmbed = createErrorEmbed('Match Not Found', 'No match with that ID exists.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  try {
+    db.deleteMatch.run(matchId);
+    const successEmbed = createSuccessEmbed('Match Completed', 
+      `Match **${match.home_team_name}** vs **${match.away_team_name}** has been marked as done and removed from the database.`);
+    return interaction.reply({ embeds: [successEmbed] });
+  } catch (error) {
+    console.error('Error marking match as done:', error);
+    const errorEmbed = createErrorEmbed('Error', 'Failed to mark match as done.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+}
+
 async function execute(interaction) {
   const subcommand = interaction.options.getSubcommand();
 
@@ -396,6 +461,10 @@ async function execute(interaction) {
       return handleSetMatchChannel(interaction);
     case 'shout':
       return handleShout(interaction);
+    case 'list':
+      return handleList(interaction);
+    case 'done':
+      return handleDone(interaction);
   }
 }
 
