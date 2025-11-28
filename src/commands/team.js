@@ -595,10 +595,16 @@ async function handleDemand(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not in the player database.')], ephemeral: true });
   }
 
-  // Check if player has already used demand twice
-  const demandUses = db.getPlayerDemandUses.get(interaction.user.id);
-  if (demandUses && demandUses.demand_uses >= 2) {
-    return interaction.reply({ embeds: [createErrorEmbed('Limit Reached', 'You have already used your 2 allowed demands. Contact an admin if you need further assistance.')], ephemeral: true });
+  // Check transaction window
+  const transactionWindowSetting = db.getSetting.get('transaction_window_open');
+  const isWindowOpen = transactionWindowSetting && transactionWindowSetting.value === 'true';
+
+  // Check if player has already used demand twice (only if window is closed)
+  if (!isWindowOpen) {
+    const demandUses = db.getPlayerDemandUses.get(interaction.user.id);
+    if (demandUses && demandUses.demand_uses >= 2) {
+      return interaction.reply({ embeds: [createErrorEmbed('Limit Reached', 'You have already used your 2 allowed demands. Contact an admin if you need further assistance.')], ephemeral: true });
+    }
   }
 
   // Check if player is a manager
@@ -615,25 +621,24 @@ async function handleDemand(interaction) {
 
   const team = playerTeams[0];
 
-  try {
-    db.removeMembership.run(player.id, team.id);
-    db.incrementDemandUses.run(interaction.user.id);
+  // Send confirmation message
+  const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+  const row = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId(`demand_confirm_${interaction.user.id}`)
+        .setLabel('Confirm Demand')
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`demand_cancel_${interaction.user.id}`)
+        .setLabel('Cancel')
+        .setStyle(ButtonStyle.Secondary)
+    );
 
-    try {
-      const member = await interaction.guild.members.fetch(interaction.user.id);
-      await member.roles.remove(team.role_id);
-    } catch (error) {
-      console.error('Error removing role:', error);
-    }
+  const confirmEmbed = createSuccessEmbed('Confirm Demand',
+    `Are you sure you want to be released from **${team.name}**?\n\nThis action cannot be undone.`);
 
-    const successEmbed = createSuccessEmbed('Released from Team', 
-      `You have been released from **${team.name}**.\n\n` +
-      `Demands used: ${(demandUses?.demand_uses || 0) + 1}/2`);
-    return interaction.reply({ embeds: [successEmbed], ephemeral: true });
-  } catch (error) {
-    console.error('Error processing demand:', error);
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Failed to process demand.')], ephemeral: true });
-  }
+  return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
 }
 
 async function handleAddPlayer(interaction) {

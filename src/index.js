@@ -10,6 +10,7 @@ const refereeCommand = require('./commands/referee');
 const statsCommand = require('./commands/stats');
 const matchCommand = require('./commands/match');
 const fixturesCommand = require('./commands/fixtures');
+const transactionCommand = require('./commands/transaction');
 
 const client = new Client({
   intents: [
@@ -27,6 +28,7 @@ client.commands.set('referee', refereeCommand);
 client.commands.set('stats', statsCommand);
 client.commands.set('match', matchCommand);
 client.commands.set('fixtures', fixturesCommand);
+client.commands.set('transaction', transactionCommand);
 
 const commands = [
   teamCommand.command.toJSON(),
@@ -34,7 +36,8 @@ const commands = [
   refereeCommand.command.toJSON(),
   statsCommand.command.toJSON(),
   matchCommand.command.toJSON(),
-  fixturesCommand.command.toJSON()
+  fixturesCommand.command.toJSON(),
+  transactionCommand.command.toJSON()
 ];
 
 client.once(Events.ClientReady, async (readyClient) => {
@@ -105,6 +108,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 async function handleButtonInteraction(interaction) {
+  if (interaction.customId.startsWith('demand_')) {
+    return handleDemandConfirmation(interaction);
+  }
+
   const [action, decision, teamIdStr] = interaction.customId.split('_');
   
   if (action !== 'offer') return;
@@ -216,6 +223,66 @@ async function handleButtonInteraction(interaction) {
         components: []
       });
     }
+  }
+}
+
+async function handleDemandConfirmation(interaction) {
+  const [, decision, userId] = interaction.customId.split('_');
+
+  if (interaction.user.id !== userId) {
+    return interaction.reply({
+      embeds: [createErrorEmbed('Error', 'This confirmation is not for you.')],
+      ephemeral: true
+    });
+  }
+
+  if (decision === 'confirm') {
+    try {
+      const player = db.getPlayer.get(userId);
+      if (!player) {
+        return interaction.update({
+          embeds: [createErrorEmbed('Error', 'Player not found.')],
+          components: []
+        });
+      }
+
+      const playerTeams = db.getPlayerTeams.all(player.id);
+      if (playerTeams.length === 0) {
+        return interaction.update({
+          embeds: [createErrorEmbed('Error', 'You are not part of any team.')],
+          components: []
+        });
+      }
+
+      const team = playerTeams[0];
+      db.removeMembership.run(player.id, team.id);
+      db.incrementDemandUses.run(userId);
+
+      try {
+        const member = await interaction.guild.members.fetch(userId);
+        await member.roles.remove(team.role_id);
+      } catch (error) {
+        console.error('Error removing role:', error);
+      }
+
+      const demandUses = db.getPlayerDemandUses.get(userId);
+      return interaction.update({
+        embeds: [createSuccessEmbed('Released from Team',
+          `You have been released from **${team.name}**.`)],
+        components: []
+      });
+    } catch (error) {
+      console.error('Error processing demand confirmation:', error);
+      return interaction.update({
+        embeds: [createErrorEmbed('Error', 'Failed to process demand.')],
+        components: []
+      });
+    }
+  } else if (decision === 'cancel') {
+    return interaction.update({
+      embeds: [createErrorEmbed('Demand Cancelled', 'You have cancelled your demand.')],
+      components: []
+    });
   }
 }
 
