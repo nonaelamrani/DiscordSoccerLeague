@@ -117,6 +117,14 @@ const command = new SlashCommandBuilder()
           .setRequired(true)))
   .addSubcommand(subcommand =>
     subcommand
+      .setName('setassistantmanagerrole')
+      .setDescription('Set the global assistant manager role')
+      .addRoleOption(option =>
+        option.setName('role')
+          .setDescription('The assistant manager role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
       .setName('setrefereerole')
       .setDescription('Set the global referee role')
       .addRoleOption(option =>
@@ -204,6 +212,8 @@ async function execute(interaction) {
       return handleSetAssistantManager(interaction);
     case 'removeassistantmanager':
       return handleRemoveAssistantManager(interaction);
+    case 'setassistantmanagerrole':
+      return handleSetAssistantManagerRole(interaction);
     case 'setrefereerole':
       return handleSetRefereeRole(interaction);
     case 'transactionschannel':
@@ -680,6 +690,18 @@ async function handleRemoveAssistantManager(interaction) {
   }
 
   return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Removed', `<@${assistantManagerId}> is no longer the assistant manager of **${team.name}**.`)] });
+}
+
+async function handleSetAssistantManagerRole(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can set the assistant manager role.')], ephemeral: true });
+  }
+
+  const role = interaction.options.getRole('role');
+  
+  db.setSetting.run('assistant_manager_role', role.id);
+  
+  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Role Set', `${role} has been set as the global Assistant Manager role.`)] });
 }
 
 async function handleSetRefereeRole(interaction) {
