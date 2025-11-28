@@ -327,6 +327,40 @@ async function handleRelease(interaction) {
     console.error('Error removing role:', error);
   }
 
+  const transactionChannelSetting = db.getSetting.get('transactions_channel');
+  if (transactionChannelSetting) {
+    try {
+      const channel = await interaction.guild.channels.fetch(transactionChannelSetting.value);
+      if (channel) {
+        const { EmbedBuilder } = require('discord.js');
+        
+        let contractorName = 'Unknown';
+        try {
+          const contractorUser = await interaction.guild.members.fetch(team.manager_id);
+          contractorName = contractorUser.user.username;
+        } catch (e) {
+          console.error('Error fetching contractor:', e);
+        }
+        
+        const embed = new EmbedBuilder()
+          .setColor(0xFF0000)
+          .setTitle('❌ Player Released')
+          .setDescription(`<@${playerUser.id}> has been released from **${team.name}**`)
+          .setThumbnail(playerUser.displayAvatarURL())
+          .addFields(
+            { name: 'Player', value: `<@${playerUser.id}>`, inline: true },
+            { name: 'Team', value: team.name, inline: true },
+            { name: 'Released by', value: contractorName, inline: true },
+            { name: 'Released on', value: new Date().toLocaleString(), inline: false }
+          )
+          .setTimestamp();
+        await channel.send({ embeds: [embed] });
+      }
+    } catch (error) {
+      console.error('Error logging transaction:', error);
+    }
+  }
+
   return interaction.reply({ embeds: [createSuccessEmbed('Player Released', `<@${playerUser.id}> has been released from **${team.name}**.`)] });
 }
 
