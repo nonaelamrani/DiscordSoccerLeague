@@ -8,6 +8,14 @@ const command = new SlashCommandBuilder()
   .setDescription('Fixture posting commands')
   .addSubcommand(subcommand =>
     subcommand
+      .setName('setchannel')
+      .setDescription('Set the channel for posting fixtures (Admin only)')
+      .addChannelOption(option =>
+        option.setName('channel')
+          .setDescription('Channel for fixtures')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
       .setName('post')
       .setDescription('Post an embed of all upcoming matches grouped by date'))
   .addSubcommand(subcommand =>
@@ -18,6 +26,25 @@ const command = new SlashCommandBuilder()
     subcommand
       .setName('remove')
       .setDescription('Delete the posted fixtures embed'));
+
+async function handleSetChannel(interaction) {
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can set the fixtures channel.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  const channel = interaction.options.getChannel('channel');
+
+  try {
+    db.setSetting.run('fixtures_channel', channel.id);
+    const successEmbed = createSuccessEmbed('Fixtures Channel Set', `Fixtures will now be posted in ${channel}.`);
+    return interaction.reply({ embeds: [successEmbed], ephemeral: true });
+  } catch (error) {
+    console.error('Error setting fixtures channel:', error);
+    const errorEmbed = createErrorEmbed('Error', 'Failed to set fixtures channel.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+}
 
 async function handlePost(interaction) {
   if (!isAdmin(interaction.member)) {
@@ -139,6 +166,8 @@ async function execute(interaction) {
   const subcommand = interaction.options.getSubcommand();
 
   switch (subcommand) {
+    case 'setchannel':
+      return handleSetChannel(interaction);
     case 'post':
       return handlePost(interaction);
     case 'done':
