@@ -127,6 +127,43 @@ function createRefereesEmbed(referees) {
   return embed;
 }
 
+function createFixturesEmbed(matches) {
+  const embed = new EmbedBuilder()
+    .setColor(0xFF6B00)
+    .setTitle('📅 Upcoming Fixtures')
+    .setTimestamp();
+
+  if (matches.length === 0) {
+    embed.setDescription('No upcoming matches scheduled.');
+    return embed;
+  }
+
+  // Group matches by date
+  const matchesByDate = {};
+  matches.forEach(match => {
+    if (!matchesByDate[match.match_date]) {
+      matchesByDate[match.match_date] = [];
+    }
+    matchesByDate[match.match_date].push(match);
+  });
+
+  // Add fields for each date
+  Object.keys(matchesByDate).sort().forEach(date => {
+    const dateMatches = matchesByDate[date];
+    const matchLines = dateMatches.map(m => 
+      `\`${m.match_time}\` **${m.home_team_short}** vs **${m.away_team_short}** @ ${m.stadium}`
+    ).join('\n');
+    
+    embed.addFields({
+      name: date,
+      value: matchLines,
+      inline: false
+    });
+  });
+
+  return embed;
+}
+
 module.exports = {
   createSuccessEmbed,
   createErrorEmbed,
@@ -136,5 +173,6 @@ module.exports = {
   createOfferEmbed,
   createTopScorersEmbed,
   createTopPlaymakersEmbed,
-  createRefereesEmbed
+  createRefereesEmbed,
+  createFixturesEmbed
 };

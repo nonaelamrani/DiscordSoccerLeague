@@ -59,6 +59,21 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS matches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    home_team_id INTEGER NOT NULL,
+    away_team_id INTEGER NOT NULL,
+    stadium TEXT NOT NULL,
+    match_date TEXT NOT NULL,
+    match_time TEXT NOT NULL,
+    status TEXT DEFAULT 'scheduled' CHECK(status IN ('scheduled', 'cancelled')),
+    cancel_reason TEXT,
+    fixtures_message_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE
+  );
 `);
 
 const createTeam = db.prepare(`
@@ -188,6 +203,47 @@ const getPlayerPendingOffers = db.prepare(`
   SELECT * FROM pending_offers WHERE player_id = ?
 `);
 
+const createMatch = db.prepare(`
+  INSERT INTO matches (home_team_id, away_team_id, stadium, match_date, match_time) VALUES (?, ?, ?, ?, ?)
+`);
+
+const getMatch = db.prepare(`
+  SELECT m.*, ht.name as home_team_name, ht.short as home_team_short, at.name as away_team_name, at.short as away_team_short
+  FROM matches m
+  JOIN teams ht ON m.home_team_id = ht.id
+  JOIN teams at ON m.away_team_id = at.id
+  WHERE m.id = ?
+`);
+
+const updateMatch = db.prepare(`
+  UPDATE matches SET home_team_id = ?, away_team_id = ?, stadium = ?, match_date = ?, match_time = ? WHERE id = ?
+`);
+
+const cancelMatch = db.prepare(`
+  UPDATE matches SET status = 'cancelled', cancel_reason = ? WHERE id = ?
+`);
+
+const getAllUpcomingMatches = db.prepare(`
+  SELECT m.*, ht.name as home_team_name, ht.short as home_team_short, at.name as away_team_name, at.short as away_team_short
+  FROM matches m
+  JOIN teams ht ON m.home_team_id = ht.id
+  JOIN teams at ON m.away_team_id = at.id
+  WHERE m.status = 'scheduled'
+  ORDER BY m.match_date ASC, m.match_time ASC
+`);
+
+const getFixturesMessage = db.prepare(`
+  SELECT * FROM matches WHERE fixtures_message_id IS NOT NULL LIMIT 1
+`);
+
+const setFixturesMessage = db.prepare(`
+  UPDATE matches SET fixtures_message_id = ? WHERE id = ?
+`);
+
+const clearFixturesMessage = db.prepare(`
+  UPDATE matches SET fixtures_message_id = NULL
+`);
+
 module.exports = {
   db,
   createTeam,
@@ -219,5 +275,13 @@ module.exports = {
   createPendingOffer,
   getPendingOffer,
   deletePendingOffer,
-  getPlayerPendingOffers
+  getPlayerPendingOffers,
+  createMatch,
+  getMatch,
+  updateMatch,
+  cancelMatch,
+  getAllUpcomingMatches,
+  getFixturesMessage,
+  setFixturesMessage,
+  clearFixturesMessage
 };
