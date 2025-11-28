@@ -101,21 +101,6 @@ try {
 }
 
 try {
-  db.exec(`DROP TABLE IF EXISTS assistant_manager_temp;`);
-  db.exec(`ALTER TABLE teams RENAME TO assistant_manager_temp;`);
-  db.exec(`
-    CREATE TABLE teams (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      short TEXT NOT NULL,
-      role_id TEXT NOT NULL UNIQUE,
-      manager_id TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-  db.exec(`INSERT INTO teams SELECT id, name, short, role_id, manager_id, created_at FROM assistant_manager_temp;`);
-  db.exec(`DROP TABLE assistant_manager_temp;`);
-  
   db.exec(`
     CREATE TABLE IF NOT EXISTS assistant_managers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,7 +112,7 @@ try {
     );
   `);
 } catch (error) {
-  // Table structure already correct
+  // Table likely already exists, ignore the error
 }
 
 const createTeam = db.prepare(`
