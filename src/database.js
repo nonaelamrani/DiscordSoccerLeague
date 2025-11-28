@@ -54,10 +54,15 @@ db.exec(`
     team_id INTEGER NOT NULL,
     salary TEXT NOT NULL,
     duration TEXT NOT NULL,
+    position TEXT,
     message_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
   );
+`);
+
+db.exec(`
+  ALTER TABLE pending_offers ADD COLUMN position TEXT;
 `);
 
 const createTeam = db.prepare(`
@@ -172,7 +177,7 @@ const getTopAssists = db.prepare(`
 `);
 
 const createPendingOffer = db.prepare(`
-  INSERT INTO pending_offers (player_id, team_id, salary, duration, message_id) VALUES (?, ?, ?, ?, ?)
+  INSERT INTO pending_offers (player_id, team_id, salary, duration, position, message_id) VALUES (?, ?, ?, ?, ?, ?)
 `);
 
 const getPendingOffer = db.prepare(`

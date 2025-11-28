@@ -165,6 +165,7 @@ async function handleButtonInteraction(interaction) {
               .addFields(
                 { name: 'Signee', value: `<@${interaction.user.id}>`, inline: true },
                 { name: 'Team', value: team.name, inline: true },
+                { name: 'Position', value: offer.position, inline: true },
                 { name: 'Salary', value: offer.salary, inline: true },
                 { name: 'Duration', value: offer.duration, inline: true },
                 { name: 'Signed on', value: new Date().toLocaleString(), inline: false }

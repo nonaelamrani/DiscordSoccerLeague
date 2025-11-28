@@ -64,13 +64,14 @@ function createRosterEmbed(team, members, guild) {
   return embed;
 }
 
-function createOfferEmbed(team, salary, duration) {
+function createOfferEmbed(team, salary, duration, position) {
   return new EmbedBuilder()
     .setColor(0xFFD700)
     .setTitle('Contract Offer')
     .setDescription(`You have received a contract offer from **${team.name}**!`)
     .addFields(
       { name: 'Team', value: team.name, inline: true },
+      { name: 'Position', value: position, inline: true },
       { name: 'Salary', value: salary, inline: true },
       { name: 'Duration', value: duration, inline: true }
     )

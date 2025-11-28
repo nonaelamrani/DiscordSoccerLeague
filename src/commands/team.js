@@ -45,6 +45,10 @@ const command = new SlashCommandBuilder()
       .addStringOption(option =>
         option.setName('duration')
           .setDescription('Contract duration')
+          .setRequired(true))
+      .addStringOption(option =>
+        option.setName('position')
+          .setDescription('Player position')
           .setRequired(true)))
   .addSubcommand(subcommand =>
     subcommand
@@ -223,6 +227,7 @@ async function processOffer(interaction, team) {
   const player = interaction.options.getUser('player');
   const salary = interaction.options.getString('salary');
   const duration = interaction.options.getString('duration');
+  const position = interaction.options.getString('position');
 
   if (player.bot) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot send offers to bots.')], ephemeral: true });
@@ -247,11 +252,11 @@ async function processOffer(interaction, team) {
 
     const dmChannel = await player.createDM();
     const offerMessage = await dmChannel.send({ 
-      embeds: [createOfferEmbed(team, salary, duration)], 
+      embeds: [createOfferEmbed(team, salary, duration, position)], 
       components: [row] 
     });
 
-    db.createPendingOffer.run(player.id, team.id, salary, duration, offerMessage.id);
+    db.createPendingOffer.run(player.id, team.id, salary, duration, position, offerMessage.id);
 
     return interaction.reply({ embeds: [createSuccessEmbed('Offer Sent', `Contract offer sent to <@${player.id}>.`)], ephemeral: true });
   } catch (error) {
