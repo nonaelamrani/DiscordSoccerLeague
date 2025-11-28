@@ -47,9 +47,12 @@ function createRosterEmbed(team, members, guild) {
     .setTitle(`${team.name} [${team.short}] Roster`)
     .setTimestamp();
 
-  if (managers.length > 0) {
-    const managerList = managers.map(m => `<@${m.discord_id}>`).join('\n');
-    embed.addFields({ name: 'Manager(s)', value: managerList, inline: false });
+  const managerInfo = [];
+  if (team.manager_id) managerInfo.push(`**Manager:** <@${team.manager_id}>`);
+  if (team.assistant_manager_id) managerInfo.push(`**Assistant Manager:** <@${team.assistant_manager_id}>`);
+  
+  if (managerInfo.length > 0) {
+    embed.addFields({ name: 'Leadership', value: managerInfo.join('\n'), inline: false });
   }
 
   if (players.length > 0) {
@@ -57,8 +60,8 @@ function createRosterEmbed(team, members, guild) {
     embed.addFields({ name: 'Players', value: playerList, inline: false });
   }
 
-  if (members.length === 0) {
-    embed.setDescription('No members in this team yet.');
+  if (team.manager_id === null && team.assistant_manager_id === null && members.length === 0) {
+    embed.setDescription('No team leadership or members assigned yet.');
   }
 
   return embed;

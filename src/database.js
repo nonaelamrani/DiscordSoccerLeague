@@ -19,6 +19,7 @@ db.exec(`
     short TEXT NOT NULL,
     role_id TEXT NOT NULL UNIQUE,
     manager_id TEXT,
+    assistant_manager_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -84,9 +85,15 @@ db.exec(`
   );
 `);
 
-// Add missing column to players table if it doesn't exist
+// Add missing columns if they don't exist
 try {
   db.exec(`ALTER TABLE players ADD COLUMN demand_uses INTEGER DEFAULT 0;`);
+} catch (error) {
+  // Column likely already exists, ignore the error
+}
+
+try {
+  db.exec(`ALTER TABLE teams ADD COLUMN assistant_manager_id TEXT;`);
 } catch (error) {
   // Column likely already exists, ignore the error
 }
@@ -125,6 +132,18 @@ const getTeamByName = db.prepare(`
 
 const clearTeamManager = db.prepare(`
   UPDATE teams SET manager_id = NULL WHERE id = ?
+`);
+
+const setTeamAssistantManager = db.prepare(`
+  UPDATE teams SET assistant_manager_id = ? WHERE id = ?
+`);
+
+const getTeamByAssistantManagerId = db.prepare(`
+  SELECT * FROM teams WHERE assistant_manager_id = ?
+`);
+
+const clearTeamAssistantManager = db.prepare(`
+  UPDATE teams SET assistant_manager_id = NULL WHERE id = ?
 `);
 
 const createOrUpdatePlayer = db.prepare(`
@@ -311,6 +330,9 @@ module.exports = {
   getTeamByManagerId,
   getTeamByName,
   clearTeamManager,
+  setTeamAssistantManager,
+  getTeamByAssistantManagerId,
+  clearTeamAssistantManager,
   createOrUpdatePlayer,
   getPlayer,
   getPlayerById,

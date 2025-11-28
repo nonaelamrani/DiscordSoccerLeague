@@ -92,6 +92,26 @@ const command = new SlashCommandBuilder()
           .setRequired(true)))
   .addSubcommand(subcommand =>
     subcommand
+      .setName('setassistantmanager')
+      .setDescription('Set an assistant manager for a team')
+      .addUserOption(option =>
+        option.setName('assistantmanager')
+          .setDescription('User to set as assistant manager')
+          .setRequired(true))
+      .addRoleOption(option =>
+        option.setName('role')
+          .setDescription('Team role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('removeassistantmanager')
+      .setDescription('Remove an assistant manager from a team')
+      .addRoleOption(option =>
+        option.setName('role')
+          .setDescription('Team role')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
       .setName('setrefereerole')
       .setDescription('Set the global referee role')
       .addRoleOption(option =>
@@ -175,6 +195,10 @@ async function execute(interaction) {
       return handleSetManagerRole(interaction);
     case 'removemanager':
       return handleRemoveManager(interaction);
+    case 'setassistantmanager':
+      return handleSetAssistantManager(interaction);
+    case 'removeassistantmanager':
+      return handleRemoveAssistantManager(interaction);
     case 'setrefereerole':
       return handleSetRefereeRole(interaction);
     case 'transactionschannel':
@@ -293,10 +317,14 @@ async function processOffer(interaction, team) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'You cannot send a contract offer to yourself.')], ephemeral: true });
   }
 
-  // Check if target player is a manager of any team
+  // Check if target player is a manager or assistant manager of any team
   const targetManager = db.getTeamByManagerId.get(player.id);
+  const targetAssistantManager = db.getTeamByAssistantManagerId.get(player.id);
   if (targetManager) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${player.id}> is a manager of **${targetManager.name}** and cannot receive contract offers.`)], ephemeral: true });
+  }
+  if (targetAssistantManager) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${player.id}> is an assistant manager of **${targetAssistantManager.name}** and cannot receive contract offers.`)], ephemeral: true });
   }
 
   // Check if target player is already signed to a team
@@ -564,6 +592,97 @@ async function handleRemoveManager(interaction) {
   return interaction.reply({ embeds: [createSuccessEmbed('Manager Removed', `<@${managerId}> is no longer the manager of **${team.name}**.`)] });
 }
 
+async function handleSetAssistantManager(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can set assistant managers.')], ephemeral: true });
+  }
+
+  const managerRoleSetting = db.getSetting.get('manager_role');
+  if (!managerRoleSetting) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager role has not been set. Use `/team setmanagerrole` first.')], ephemeral: true });
+  }
+
+  const assistantManagerUser = interaction.options.getUser('assistantmanager');
+  const role = interaction.options.getRole('role');
+
+  const team = db.getTeamByRoleId.get(role.id);
+  if (!team) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
+  }
+
+  if (team.assistant_manager_id) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `This team already has an assistant manager (<@${team.assistant_manager_id}>). Use \`/team removeassistantmanager\` first.`)], ephemeral: true });
+  }
+
+  const existingTeam = db.getTeamByAssistantManagerId.get(assistantManagerUser.id);
+  if (existingTeam) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${assistantManagerUser.id}> is already the assistant manager of **${existingTeam.name}**. A user can only be assistant manager of one team.`)], ephemeral: true });
+  }
+
+  db.createOrUpdatePlayer.run(assistantManagerUser.id, assistantManagerUser.username);
+  const player = db.getPlayer.get(assistantManagerUser.id);
+
+  // Check if the user is already a player on any team
+  const playerTeams = db.getPlayerTeams.all(player.id);
+  if (playerTeams.length > 0) {
+    const teamList = playerTeams.map(t => `**${t.name}**`).join(', ');
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${assistantManagerUser.id}> is already a player on ${teamList}. A user cannot be both a player and an assistant manager.`)], ephemeral: true });
+  }
+
+  db.setTeamAssistantManager.run(assistantManagerUser.id, team.id);
+  db.addMembership.run(player.id, team.id, 'manager', null, null);
+
+  try {
+    const member = await interaction.guild.members.fetch(assistantManagerUser.id);
+    await member.roles.add(role.id);
+    await member.roles.add(managerRoleSetting.value);
+  } catch (error) {
+    console.error('Error adding roles:', error);
+  }
+
+  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Set', `<@${assistantManagerUser.id}> is now the assistant manager of **${team.name}** and has been given the Manager role.`)] });
+}
+
+async function handleRemoveAssistantManager(interaction) {
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can remove assistant managers.')], ephemeral: true });
+  }
+
+  const role = interaction.options.getRole('role');
+
+  const team = db.getTeamByRoleId.get(role.id);
+  if (!team) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'No team found with this role.')], ephemeral: true });
+  }
+
+  if (!team.assistant_manager_id) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'This team does not have an assistant manager.')], ephemeral: true });
+  }
+
+  const assistantManagerId = team.assistant_manager_id;
+  const player = db.getPlayer.get(assistantManagerId);
+
+  db.clearTeamAssistantManager.run(team.id);
+  
+  if (player) {
+    db.removeMembership.run(player.id, team.id);
+  }
+
+  const managerRoleSetting = db.getSetting.get('manager_role');
+
+  try {
+    const member = await interaction.guild.members.fetch(assistantManagerId);
+    await member.roles.remove(role.id);
+    if (managerRoleSetting) {
+      await member.roles.remove(managerRoleSetting.value);
+    }
+  } catch (error) {
+    console.error('Error removing roles:', error);
+  }
+
+  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Removed', `<@${assistantManagerId}> is no longer the assistant manager of **${team.name}**.`)] });
+}
+
 async function handleSetRefereeRole(interaction) {
   if (!isAdmin(interaction.member)) {
     return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can set the referee role.')], ephemeral: true });
@@ -595,10 +714,11 @@ async function handleDemand(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'You are not in the player database.')], ephemeral: true });
   }
 
-  // Check if user is a manager (cannot demand)
+  // Check if user is a manager or assistant manager (cannot demand)
   const isManager = db.getTeamByManagerId.get(interaction.user.id);
-  if (isManager) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Managers cannot use the demand command.')], ephemeral: true });
+  const isAssistantManager = db.getTeamByAssistantManagerId.get(interaction.user.id);
+  if (isManager || isAssistantManager) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Managers and assistant managers cannot use the demand command.')], ephemeral: true });
   }
 
   // Check transaction window

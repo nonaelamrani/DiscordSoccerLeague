@@ -16,7 +16,12 @@ function isRefereeOrAdmin(member) {
 
 function isManagerOfTeam(member, team) {
   if (!team) return false;
-  return team.manager_id === member.id;
+  return team.manager_id === member.id || team.assistant_manager_id === member.id;
+}
+
+function isAssistantManagerOfTeam(member, team) {
+  if (!team) return false;
+  return team.assistant_manager_id === member.id;
 }
 
 function getManagerTeam(member) {
@@ -37,6 +42,7 @@ module.exports = {
   isReferee,
   isRefereeOrAdmin,
   isManagerOfTeam,
+  isAssistantManagerOfTeam,
   getManagerTeam,
   hasTeamRole
 };
