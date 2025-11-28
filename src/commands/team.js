@@ -237,6 +237,22 @@ async function processOffer(interaction, team) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'You cannot send a contract offer to yourself.')], ephemeral: true });
   }
 
+  // Check if target player is a manager of any team
+  const targetManager = db.getTeamByManagerId.get(player.id);
+  if (targetManager) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${player.id}> is a manager of **${targetManager.name}** and cannot receive contract offers.`)], ephemeral: true });
+  }
+
+  // Check if target player is already signed to a team
+  const playerRecord = db.getPlayer.get(player.id);
+  if (playerRecord) {
+    const existingTeams = db.getPlayerTeams.all(playerRecord.id);
+    if (existingTeams.length > 0) {
+      const teamList = existingTeams.map(t => `**${t.name}**`).join(', ');
+      return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${player.id}> is already signed to ${teamList} and cannot receive offers from other teams.`)], ephemeral: true });
+    }
+  }
+
   try {
     const row = new ActionRowBuilder()
       .addComponents(
@@ -412,6 +428,13 @@ async function handleSetManager(interaction) {
 
   db.createOrUpdatePlayer.run(managerUser.id, managerUser.username);
   const player = db.getPlayer.get(managerUser.id);
+
+  // Check if the user is already a player on any team
+  const playerTeams = db.getPlayerTeams.all(player.id);
+  if (playerTeams.length > 0) {
+    const teamList = playerTeams.map(t => `**${t.name}**`).join(', ');
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${managerUser.id}> is already a player on ${teamList}. A user cannot be both a player and a manager.`)], ephemeral: true });
+  }
 
   db.setTeamManager.run(managerUser.id, team.id);
   db.addMembership.run(player.id, team.id, 'manager', null, null);
