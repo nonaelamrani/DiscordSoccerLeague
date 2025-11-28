@@ -80,6 +80,26 @@ const command = new SlashCommandBuilder()
       .addStringOption(option =>
         option.setName('new_time')
           .setDescription('New time (HH:MM)')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('setmatchchannel')
+      .setDescription('Set the channel for match announcements (Admin only)')
+      .addChannelOption(option =>
+        option.setName('channel')
+          .setDescription('Channel for match shouts')
+          .setRequired(true)))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('shout')
+      .setDescription('Announce a match in the match channel')
+      .addIntegerOption(option =>
+        option.setName('match_id')
+          .setDescription('Match ID to announce')
+          .setRequired(true))
+      .addStringOption(option =>
+        option.setName('link')
+          .setDescription('Link to the match (stream, ticket, etc)')
           .setRequired(true)));
 
 async function handleCreate(interaction) {
@@ -297,6 +317,69 @@ async function handleReschedule(interaction) {
   }
 }
 
+async function handleSetMatchChannel(interaction) {
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can set the match channel.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  const channel = interaction.options.getChannel('channel');
+
+  try {
+    db.setSetting.run('match_channel', channel.id);
+    const successEmbed = createSuccessEmbed('Match Channel Set', `Match announcements will now be posted in ${channel}.`);
+    return interaction.reply({ embeds: [successEmbed], ephemeral: true });
+  } catch (error) {
+    console.error('Error setting match channel:', error);
+    const errorEmbed = createErrorEmbed('Error', 'Failed to set match channel.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+}
+
+async function handleShout(interaction) {
+  if (!isRefereeOrAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only admins and referees can announce matches.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  const matchId = interaction.options.getInteger('match_id');
+  const link = interaction.options.getString('link');
+
+  const match = db.getMatch.get(matchId);
+  if (!match) {
+    const errorEmbed = createErrorEmbed('Match Not Found', 'No match with that ID exists.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  const matchChannelSetting = db.getSetting.get('match_channel');
+  if (!matchChannelSetting) {
+    const errorEmbed = createErrorEmbed('Error', 'Match channel has not been set. An admin must use `/match setmatchchannel` first.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  try {
+    const channel = await interaction.client.channels.fetch(matchChannelSetting.value);
+    if (!channel) {
+      const errorEmbed = createErrorEmbed('Error', 'Match channel not found.');
+      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+    }
+
+    const homeTeam = db.getTeamById.get(match.home_team_id);
+    const awayTeam = db.getTeamById.get(match.away_team_id);
+
+    const announcement = `<@&${homeTeam.role_id}> VS <@&${awayTeam.role_id}>\n🏟️ ${match.stadium}\n\n${link}`;
+    
+    await channel.send(announcement);
+
+    const successEmbed = createSuccessEmbed('Match Announced', `Match has been announced in <#${matchChannelSetting.value}>.`);
+    return interaction.reply({ embeds: [successEmbed], ephemeral: true });
+  } catch (error) {
+    console.error('Error announcing match:', error);
+    const errorEmbed = createErrorEmbed('Error', `Failed to announce match: ${error.message}`);
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+}
+
 async function execute(interaction) {
   const subcommand = interaction.options.getSubcommand();
 
@@ -309,6 +392,10 @@ async function execute(interaction) {
       return handleCancel(interaction);
     case 'reschedule':
       return handleReschedule(interaction);
+    case 'setmatchchannel':
+      return handleSetMatchChannel(interaction);
+    case 'shout':
+      return handleShout(interaction);
   }
 }
 
