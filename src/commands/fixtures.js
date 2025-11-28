@@ -112,9 +112,15 @@ async function handleDone(interaction) {
     
     // Update the fixtures embed to show green and mark as done
     try {
-      const message = await interaction.channel.messages.fetch(fixturesData.fixtures_message_id);
-      const doneEmbed = createFixturesDoneEmbed();
-      await message.edit({ embeds: [doneEmbed] });
+      const fixturesChannelSetting = db.getSetting.get('fixtures_channel');
+      if (fixturesChannelSetting) {
+        const channel = await interaction.client.channels.fetch(fixturesChannelSetting.value);
+        if (channel) {
+          const message = await channel.messages.fetch(fixturesData.fixtures_message_id);
+          const doneEmbed = createFixturesDoneEmbed();
+          await message.edit({ embeds: [doneEmbed] });
+        }
+      }
     } catch (err) {
       console.log('Could not fetch or edit fixtures message:', err);
     }
@@ -156,8 +162,14 @@ async function handleRemove(interaction) {
     }
 
     try {
-      const message = await interaction.channel.messages.fetch(fixturesData.fixtures_message_id);
-      await message.delete();
+      const fixturesChannelSetting = db.getSetting.get('fixtures_channel');
+      if (fixturesChannelSetting) {
+        const channel = await interaction.client.channels.fetch(fixturesChannelSetting.value);
+        if (channel) {
+          const message = await channel.messages.fetch(fixturesData.fixtures_message_id);
+          await message.delete();
+        }
+      }
     } catch (err) {
       // Message may have been deleted already
       console.log('Could not fetch message, but clearing from database anyway');
