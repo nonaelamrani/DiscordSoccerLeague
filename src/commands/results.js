@@ -31,6 +31,22 @@ const command = new SlashCommandBuilder()
           .setDescription('Final score (e.g., 3-2)')
           .setRequired(true))
       .addUserOption(option =>
+        option.setName('motm')
+          .setDescription('Man of the Match')
+          .setRequired(true))
+      .addUserOption(option =>
+        option.setName('mention1')
+          .setDescription('First mention')
+          .setRequired(true))
+      .addUserOption(option =>
+        option.setName('mention2')
+          .setDescription('Second mention')
+          .setRequired(true))
+      .addUserOption(option =>
+        option.setName('mention3')
+          .setDescription('Third mention')
+          .setRequired(true))
+      .addUserOption(option =>
         option.setName('scorer1')
           .setDescription('First scorer')
           .setRequired(false))
@@ -55,22 +71,6 @@ const command = new SlashCommandBuilder()
           .setDescription('Goals by third scorer')
           .setRequired(false))
       .addUserOption(option =>
-        option.setName('scorer4')
-          .setDescription('Fourth scorer')
-          .setRequired(false))
-      .addIntegerOption(option =>
-        option.setName('goals4')
-          .setDescription('Goals by fourth scorer')
-          .setRequired(false))
-      .addUserOption(option =>
-        option.setName('scorer5')
-          .setDescription('Fifth scorer')
-          .setRequired(false))
-      .addIntegerOption(option =>
-        option.setName('goals5')
-          .setDescription('Goals by fifth scorer')
-          .setRequired(false))
-      .addUserOption(option =>
         option.setName('assister1')
           .setDescription('First assister')
           .setRequired(false))
@@ -93,39 +93,7 @@ const command = new SlashCommandBuilder()
       .addIntegerOption(option =>
         option.setName('assist3')
           .setDescription('Assists by third assister')
-          .setRequired(false))
-      .addUserOption(option =>
-        option.setName('assister4')
-          .setDescription('Fourth assister')
-          .setRequired(false))
-      .addIntegerOption(option =>
-        option.setName('assist4')
-          .setDescription('Assists by fourth assister')
-          .setRequired(false))
-      .addUserOption(option =>
-        option.setName('assister5')
-          .setDescription('Fifth assister')
-          .setRequired(false))
-      .addIntegerOption(option =>
-        option.setName('assist5')
-          .setDescription('Assists by fifth assister')
-          .setRequired(false))
-      .addUserOption(option =>
-        option.setName('motm')
-          .setDescription('Man of the Match')
-          .setRequired(true))
-      .addUserOption(option =>
-        option.setName('mention1')
-          .setDescription('First mention')
-          .setRequired(true))
-      .addUserOption(option =>
-        option.setName('mention2')
-          .setDescription('Second mention')
-          .setRequired(true))
-      .addUserOption(option =>
-        option.setName('mention3')
-          .setDescription('Third mention')
-          .setRequired(true)));
+          .setRequired(false)));
 
 async function execute(interaction) {
   const subcommand = interaction.options.getSubcommand();
@@ -164,7 +132,7 @@ async function handlePost(interaction) {
   const mention3 = interaction.options.getUser('mention3');
 
   const scorers = [];
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 3; i++) {
     const scorer = interaction.options.getUser(`scorer${i}`);
     const goals = interaction.options.getInteger(`goals${i}`);
     if (scorer && goals) {
@@ -174,7 +142,7 @@ async function handlePost(interaction) {
   }
 
   const assisters = [];
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 3; i++) {
     const assister = interaction.options.getUser(`assister${i}`);
     const assists = interaction.options.getInteger(`assist${i}`);
     if (assister && assists) {
