@@ -606,9 +606,9 @@ async function handleSetAssistantManager(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can set assistant managers.')], ephemeral: true });
   }
 
-  const managerRoleSetting = db.getSetting.get('manager_role');
-  if (!managerRoleSetting) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager role has not been set. Use `/team setmanagerrole` first.')], ephemeral: true });
+  const assistantManagerRoleSetting = db.getSetting.get('assistant_manager_role');
+  if (!assistantManagerRoleSetting) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Assistant Manager role has not been set. Use `/team setassistantmanagerrole` first.')], ephemeral: true });
   }
 
   const assistantManagerUser = interaction.options.getUser('assistantmanager');
@@ -656,12 +656,12 @@ async function handleSetAssistantManager(interaction) {
   try {
     const member = await interaction.guild.members.fetch(assistantManagerUser.id);
     await member.roles.add(role.id);
-    await member.roles.add(managerRoleSetting.value);
+    await member.roles.add(assistantManagerRoleSetting.value);
   } catch (error) {
     console.error('Error adding roles:', error);
   }
 
-  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Set', `<@${assistantManagerUser.id}> is now an assistant manager of **${team.name}** and has been given the Manager role.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Assistant Manager Set', `<@${assistantManagerUser.id}> is now an assistant manager of **${team.name}** and has been given the Assistant Manager role.`)] });
 }
 
 async function handleRemoveAssistantManager(interaction) {
@@ -690,7 +690,7 @@ async function handleRemoveAssistantManager(interaction) {
     assistantToRemove = assistants[0];
   }
 
-  const managerRoleSetting = db.getSetting.get('manager_role');
+  const assistantManagerRoleSetting = db.getSetting.get('assistant_manager_role');
   const assistantManagerId = assistantToRemove.discord_id;
 
   db.removeAssistantManagerByDiscordId.run(assistantManagerId, team.id);
@@ -698,8 +698,8 @@ async function handleRemoveAssistantManager(interaction) {
   try {
     const member = await interaction.guild.members.fetch(assistantManagerId);
     await member.roles.remove(role.id);
-    if (managerRoleSetting) {
-      await member.roles.remove(managerRoleSetting.value);
+    if (assistantManagerRoleSetting) {
+      await member.roles.remove(assistantManagerRoleSetting.value);
     }
   } catch (error) {
     console.error('Error removing roles:', error);
