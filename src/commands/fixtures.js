@@ -25,7 +25,11 @@ const command = new SlashCommandBuilder()
   .addSubcommand(subcommand =>
     subcommand
       .setName('remove')
-      .setDescription('Delete the posted fixtures embed'));
+      .setDescription('Delete the posted fixtures embed'))
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('update')
+      .setDescription('Update the fixtures embed with latest match changes'));
 
 async function handleSetChannel(interaction) {
   if (!isAdmin(interaction.member)) {
@@ -186,6 +190,68 @@ async function handleRemove(interaction) {
   }
 }
 
+async function handleUpdate(interaction) {
+  if (!isAdmin(interaction.member)) {
+    const errorEmbed = createErrorEmbed('Permission Denied', 'Only administrators can update fixtures.');
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
+
+  await interaction.deferReply();
+
+  try {
+    const fixturesData = db.getFixturesMessage.get();
+    
+    if (!fixturesData || !fixturesData.fixtures_message_id) {
+      const errorEmbed = createErrorEmbed('No Fixtures', 'No fixtures message has been posted.');
+      return interaction.editReply({ embeds: [errorEmbed] });
+    }
+
+    // Check if fixtures are marked as done (protected)
+    const isDone = db.isFixturesMessageDone.get();
+    if (isDone && isDone.is_marked_done) {
+      const errorEmbed = createErrorEmbed('Protected', 'This fixtures embed is archived and protected. It cannot be updated.');
+      return interaction.editReply({ embeds: [errorEmbed] });
+    }
+
+    const matches = db.getAllUpcomingMatches.all();
+
+    if (matches.length === 0) {
+      const errorEmbed = createErrorEmbed('No Matches', 'There are no upcoming scheduled matches.');
+      return interaction.editReply({ embeds: [errorEmbed] });
+    }
+
+    const embed = createFixturesEmbed(matches);
+
+    try {
+      const fixturesChannelSetting = db.getSetting.get('fixtures_channel');
+      if (!fixturesChannelSetting) {
+        const errorEmbed = createErrorEmbed('Error', 'Fixtures channel has not been set.');
+        return interaction.editReply({ embeds: [errorEmbed] });
+      }
+
+      const channel = await interaction.client.channels.fetch(fixturesChannelSetting.value);
+      if (!channel) {
+        const errorEmbed = createErrorEmbed('Error', 'Fixtures channel not found.');
+        return interaction.editReply({ embeds: [errorEmbed] });
+      }
+
+      const message = await channel.messages.fetch(fixturesData.fixtures_message_id);
+      await message.edit({ embeds: [embed] });
+
+      const successEmbed = createSuccessEmbed('Fixtures Updated', `Updated ${matches.length} match(es) in the fixtures embed.`);
+      return interaction.editReply({ embeds: [successEmbed] });
+    } catch (err) {
+      console.error('Error fetching or updating fixtures message:', err);
+      const errorEmbed = createErrorEmbed('Error', 'Could not update the fixtures message. It may have been deleted.');
+      return interaction.editReply({ embeds: [errorEmbed] });
+    }
+  } catch (error) {
+    console.error('Error updating fixtures:', error);
+    const errorEmbed = createErrorEmbed('Error', 'Failed to update fixtures.');
+    return interaction.editReply({ embeds: [errorEmbed] });
+  }
+}
+
 async function execute(interaction) {
   const subcommand = interaction.options.getSubcommand();
 
@@ -198,6 +264,8 @@ async function execute(interaction) {
       return handleDone(interaction);
     case 'remove':
       return handleRemove(interaction);
+    case 'update':
+      return handleUpdate(interaction);
   }
 }
 
