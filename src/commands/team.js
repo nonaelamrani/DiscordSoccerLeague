@@ -290,18 +290,23 @@ async function handleOffer(interaction) {
   }
 
   const managerRoleSetting = db.getSetting.get('manager_role');
-  if (!managerRoleSetting) {
-    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager role has not been set. An admin must use `/team setmanagerrole` first.')], ephemeral: true });
+  const assistantManagerRoleSetting = db.getSetting.get('assistant_manager_role');
+  
+  if (!managerRoleSetting && !assistantManagerRoleSetting) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager or Assistant Manager role has not been set.')], ephemeral: true });
   }
   
-  if (!interaction.member.roles.cache.has(managerRoleSetting.value)) {
-    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the Manager role to send contract offers.')], ephemeral: true });
+  const hasManagerRole = managerRoleSetting && interaction.member.roles.cache.has(managerRoleSetting.value);
+  const hasAssistantManagerRole = assistantManagerRoleSetting && interaction.member.roles.cache.has(assistantManagerRoleSetting.value);
+  
+  if (!hasManagerRole && !hasAssistantManagerRole) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the Manager or Assistant Manager role to send contract offers.')], ephemeral: true });
   }
 
   let team = null;
   for (const [roleId] of interaction.member.roles.cache) {
     const foundTeam = db.getTeamByRoleId.get(roleId);
-    if (foundTeam && foundTeam.manager_id === interaction.member.id) {
+    if (foundTeam && isManagerOfTeam(interaction.member, foundTeam)) {
       team = foundTeam;
       break;
     }
@@ -396,17 +401,22 @@ async function handleRelease(interaction) {
     }
   } else {
     const managerRoleSetting = db.getSetting.get('manager_role');
-    if (!managerRoleSetting) {
-      return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager role has not been set. An admin must use `/team setmanagerrole` first.')], ephemeral: true });
+    const assistantManagerRoleSetting = db.getSetting.get('assistant_manager_role');
+    
+    if (!managerRoleSetting && !assistantManagerRoleSetting) {
+      return interaction.reply({ embeds: [createErrorEmbed('Error', 'Manager or Assistant Manager role has not been set.')], ephemeral: true });
     }
     
-    if (!interaction.member.roles.cache.has(managerRoleSetting.value)) {
-      return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the Manager role to release players.')], ephemeral: true });
+    const hasManagerRole = managerRoleSetting && interaction.member.roles.cache.has(managerRoleSetting.value);
+    const hasAssistantManagerRole = assistantManagerRoleSetting && interaction.member.roles.cache.has(assistantManagerRoleSetting.value);
+    
+    if (!hasManagerRole && !hasAssistantManagerRole) {
+      return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'You must have the Manager or Assistant Manager role to release players.')], ephemeral: true });
     }
 
     for (const [roleId] of interaction.member.roles.cache) {
       const foundTeam = db.getTeamByRoleId.get(roleId);
-      if (foundTeam && foundTeam.manager_id === interaction.member.id) {
+      if (foundTeam && isManagerOfTeam(interaction.member, foundTeam)) {
         team = foundTeam;
         break;
       }
@@ -455,14 +465,6 @@ async function handleRelease(interaction) {
       if (channel) {
         const { EmbedBuilder } = require('discord.js');
         
-        let contractorName = 'Unknown';
-        try {
-          const contractorUser = await interaction.guild.members.fetch(team.manager_id);
-          contractorName = contractorUser.user.username;
-        } catch (e) {
-          console.error('Error fetching contractor:', e);
-        }
-        
         const unixTimestamp = Math.floor(Date.now() / 1000);
         const embed = new EmbedBuilder()
           .setColor(0xFF0000)
@@ -472,7 +474,7 @@ async function handleRelease(interaction) {
           .addFields(
             { name: 'Player', value: `<@${playerUser.id}>`, inline: true },
             { name: 'Team', value: team.name, inline: true },
-            { name: 'Released by', value: contractorName, inline: true },
+            { name: 'Released by', value: `<@${interaction.user.id}>`, inline: true },
             { name: 'Released on', value: unixToTimestamp(unixTimestamp), inline: false }
           )
           .setTimestamp();
