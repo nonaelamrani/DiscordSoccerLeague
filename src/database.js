@@ -5,13 +5,6 @@ const db = new Database(path.join(__dirname, '..', 'league.db'));
 
 db.pragma('journal_mode = WAL');
 
-// Drop old matches table if it exists to recreate with new schema
-try {
-  db.exec(`DROP TABLE IF EXISTS matches;`);
-} catch (error) {
-  console.log('No old matches table to drop');
-}
-
 db.exec(`
   CREATE TABLE IF NOT EXISTS teams (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
