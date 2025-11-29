@@ -265,6 +265,33 @@ async function handleDemandConfirmation(interaction) {
         console.error('Error removing role:', error);
       }
 
+      const transactionChannelSetting = db.getSetting.get('transactions_channel');
+      if (transactionChannelSetting) {
+        try {
+          const channel = await client.channels.fetch(transactionChannelSetting.value);
+          if (channel) {
+            const { EmbedBuilder } = require('discord.js');
+            const unixTimestamp = Math.floor(Date.now() / 1000);
+            const { unixToTimestamp } = require('./utils/timestamps');
+            const embed = new EmbedBuilder()
+              .setColor(0xFFA500)
+              .setTitle('⚠️ Player Demanded Release')
+              .setDescription(`<@${userId}> has been released from **${team.name}** via demand`)
+              .setThumbnail(interaction.user.displayAvatarURL())
+              .addFields(
+                { name: 'Player', value: `<@${userId}>`, inline: true },
+                { name: 'Team', value: team.name, inline: true },
+                { name: 'Action', value: 'Demand', inline: true },
+                { name: 'Released on', value: unixToTimestamp(unixTimestamp), inline: false }
+              )
+              .setTimestamp();
+            await channel.send({ embeds: [embed] });
+          }
+        } catch (error) {
+          console.error('Error logging demand transaction:', error);
+        }
+      }
+
       const demandUses = db.getPlayerDemandUses.get(userId);
       return interaction.update({
         embeds: [createSuccessEmbed('Released from Team',
