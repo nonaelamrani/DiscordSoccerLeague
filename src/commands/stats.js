@@ -18,35 +18,55 @@ const command = new SlashCommandBuilder()
   .addSubcommand(subcommand =>
     subcommand
       .setName('addgoal')
-      .setDescription('Add a goal to a player')
+      .setDescription('Add goals to a player (Admin only)')
       .addUserOption(option =>
         option.setName('player')
-          .setDescription('Player to add goal to')
-          .setRequired(true)))
+          .setDescription('Player to add goals to')
+          .setRequired(true))
+      .addIntegerOption(option =>
+        option.setName('amount')
+          .setDescription('Number of goals to add')
+          .setRequired(true)
+          .setMinValue(1)))
   .addSubcommand(subcommand =>
     subcommand
-      .setName('removegoal')
-      .setDescription('Remove a goal from a player (Admin only)')
+      .setName('removegoals')
+      .setDescription('Remove goals from a player (Admin only)')
       .addUserOption(option =>
         option.setName('player')
-          .setDescription('Player to remove goal from')
-          .setRequired(true)))
+          .setDescription('Player to remove goals from')
+          .setRequired(true))
+      .addIntegerOption(option =>
+        option.setName('amount')
+          .setDescription('Number of goals to remove')
+          .setRequired(true)
+          .setMinValue(1)))
   .addSubcommand(subcommand =>
     subcommand
       .setName('addassist')
-      .setDescription('Add an assist to a player')
+      .setDescription('Add assists to a player (Admin only)')
       .addUserOption(option =>
         option.setName('player')
-          .setDescription('Player to add assist to')
-          .setRequired(true)))
+          .setDescription('Player to add assists to')
+          .setRequired(true))
+      .addIntegerOption(option =>
+        option.setName('amount')
+          .setDescription('Number of assists to add')
+          .setRequired(true)
+          .setMinValue(1)))
   .addSubcommand(subcommand =>
     subcommand
-      .setName('removeassist')
-      .setDescription('Remove an assist from a player (Admin only)')
+      .setName('removeassists')
+      .setDescription('Remove assists from a player (Admin only)')
       .addUserOption(option =>
         option.setName('player')
-          .setDescription('Player to remove assist from')
-          .setRequired(true)))
+          .setDescription('Player to remove assists from')
+          .setRequired(true))
+      .addIntegerOption(option =>
+        option.setName('amount')
+          .setDescription('Number of assists to remove')
+          .setRequired(true)
+          .setMinValue(1)))
   .addSubcommand(subcommand =>
     subcommand
       .setName('addmention')
@@ -120,11 +140,11 @@ async function execute(interaction) {
       return handleLogChannel(interaction);
     case 'addgoal':
       return handleAddGoal(interaction);
-    case 'removegoal':
+    case 'removegoals':
       return handleRemoveGoal(interaction);
     case 'addassist':
       return handleAddAssist(interaction);
-    case 'removeassist':
+    case 'removeassists':
       return handleRemoveAssist(interaction);
     case 'addmention':
       return handleAddMention(interaction);
@@ -154,11 +174,12 @@ async function handleLogChannel(interaction) {
 }
 
 async function handleAddGoal(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only referees or administrators can modify stats.')], ephemeral: true });
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can add goals.')], ephemeral: true });
   }
 
   const playerUser = interaction.options.getUser('player');
+  const amount = interaction.options.getInteger('amount');
   
   if (playerUser.bot) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot add stats to bots.')], ephemeral: true });
@@ -168,11 +189,11 @@ async function handleAddGoal(interaction) {
   const player = db.getPlayer.get(playerUser.id);
   
   const oldValue = player.goals;
-  const newValue = player.goals + 1;
+  const newValue = player.goals + amount;
   db.updatePlayerStats.run(newValue, player.assists, player.mentions, player.motm, player.discord_id);
 
   await logStatChange(interaction.client, 'Goal Added', player, interaction.user.id, oldValue, newValue);
-  return interaction.reply({ embeds: [createSuccessEmbed('Goal Added', `<@${playerUser.id}> now has **${newValue}** goals.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Goals Added', `<@${playerUser.id}> now has **${newValue}** goals.`)] });
 }
 
 async function handleRemoveGoal(interaction) {
@@ -181,6 +202,7 @@ async function handleRemoveGoal(interaction) {
   }
 
   const playerUser = interaction.options.getUser('player');
+  const amount = interaction.options.getInteger('amount');
   const player = db.getPlayer.get(playerUser.id);
 
   if (!player) {
@@ -188,19 +210,20 @@ async function handleRemoveGoal(interaction) {
   }
 
   const oldValue = player.goals;
-  const newValue = Math.max(0, player.goals - 1);
+  const newValue = Math.max(0, player.goals - amount);
   db.updatePlayerStats.run(newValue, player.assists, player.mentions, player.motm, player.discord_id);
 
   await logStatChange(interaction.client, 'Goal Removed', player, interaction.user.id, oldValue, newValue);
-  return interaction.reply({ embeds: [createSuccessEmbed('Goal Removed', `<@${playerUser.id}> now has **${newValue}** goals.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Goals Removed', `<@${playerUser.id}> now has **${newValue}** goals.`)] });
 }
 
 async function handleAddAssist(interaction) {
-  if (!isRefereeOrAdmin(interaction.member)) {
-    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only referees or administrators can modify stats.')], ephemeral: true });
+  if (!isAdmin(interaction.member)) {
+    return interaction.reply({ embeds: [createErrorEmbed('Permission Denied', 'Only administrators can add assists.')], ephemeral: true });
   }
 
   const playerUser = interaction.options.getUser('player');
+  const amount = interaction.options.getInteger('amount');
   
   if (playerUser.bot) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', 'Cannot add stats to bots.')], ephemeral: true });
@@ -210,11 +233,11 @@ async function handleAddAssist(interaction) {
   const player = db.getPlayer.get(playerUser.id);
   
   const oldValue = player.assists;
-  const newValue = player.assists + 1;
+  const newValue = player.assists + amount;
   db.updatePlayerStats.run(player.goals, newValue, player.mentions, player.motm, player.discord_id);
 
   await logStatChange(interaction.client, 'Assist Added', player, interaction.user.id, oldValue, newValue);
-  return interaction.reply({ embeds: [createSuccessEmbed('Assist Added', `<@${playerUser.id}> now has **${newValue}** assists.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Assists Added', `<@${playerUser.id}> now has **${newValue}** assists.`)] });
 }
 
 async function handleRemoveAssist(interaction) {
@@ -223,6 +246,7 @@ async function handleRemoveAssist(interaction) {
   }
 
   const playerUser = interaction.options.getUser('player');
+  const amount = interaction.options.getInteger('amount');
   const player = db.getPlayer.get(playerUser.id);
 
   if (!player) {
@@ -230,11 +254,11 @@ async function handleRemoveAssist(interaction) {
   }
 
   const oldValue = player.assists;
-  const newValue = Math.max(0, player.assists - 1);
+  const newValue = Math.max(0, player.assists - amount);
   db.updatePlayerStats.run(player.goals, newValue, player.mentions, player.motm, player.discord_id);
 
   await logStatChange(interaction.client, 'Assist Removed', player, interaction.user.id, oldValue, newValue);
-  return interaction.reply({ embeds: [createSuccessEmbed('Assist Removed', `<@${playerUser.id}> now has **${newValue}** assists.`)] });
+  return interaction.reply({ embeds: [createSuccessEmbed('Assists Removed', `<@${playerUser.id}> now has **${newValue}** assists.`)] });
 }
 
 async function handleAddMention(interaction) {
