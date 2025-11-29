@@ -344,6 +344,10 @@ const getAssistantManagerTeams = db.prepare(`
   SELECT team_id FROM assistant_managers WHERE discord_id = ?
 `);
 
+const getAssistantManager = db.prepare(`
+  SELECT * FROM assistant_managers WHERE team_id = ? AND discord_id = ?
+`);
+
 module.exports = {
   db,
   createTeam,
@@ -399,5 +403,6 @@ module.exports = {
   addAssistantManager,
   getTeamAssistantManagers,
   removeAssistantManagerByDiscordId,
-  getAssistantManagerTeams
+  getAssistantManagerTeams,
+  getAssistantManager
 };

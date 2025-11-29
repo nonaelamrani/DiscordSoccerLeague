@@ -16,7 +16,10 @@ function isRefereeOrAdmin(member) {
 
 function isManagerOfTeam(member, team) {
   if (!team) return false;
-  return team.manager_id === member.id || team.assistant_manager_id === member.id;
+  if (team.manager_id === member.id) return true;
+  
+  const assistantManager = db.getAssistantManager.get(team.id, member.id);
+  return !!assistantManager;
 }
 
 function isAssistantManagerOfTeam(member, team) {
