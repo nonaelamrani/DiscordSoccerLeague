@@ -527,6 +527,15 @@ async function handleSetManager(interaction) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${managerUser.id}> is already the manager of **${existingTeam.name}**. A user can only manage one team.`)], ephemeral: true });
   }
 
+  // Check if the user is already an assistant manager
+  const isAssistantManager = db.getAssistantManagerTeams.all(managerUser.id);
+  if (isAssistantManager.length > 0) {
+    const teamIds = isAssistantManager.map(a => a.team_id);
+    const assistantTeams = teamIds.map(id => db.getTeamById.get(id));
+    const teamList = assistantTeams.map(t => `**${t.name}**`).join(', ');
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${managerUser.id}> is already an assistant manager of ${teamList}. A user cannot be both a manager and an assistant manager.`)], ephemeral: true });
+  }
+
   db.createOrUpdatePlayer.run(managerUser.id, managerUser.username);
   const player = db.getPlayer.get(managerUser.id);
 
@@ -625,6 +634,12 @@ async function handleSetAssistantManager(interaction) {
   const existingAssistants = db.getTeamAssistantManagers.all(team.id);
   if (existingAssistants.length >= 2) {
     return interaction.reply({ embeds: [createErrorEmbed('Error', `This team already has 2 assistant managers (max capacity). Use \`/team removeassistantmanager\` first.`)], ephemeral: true });
+  }
+
+  // Check if user is already a manager
+  const isManager = db.getTeamByManagerId.get(assistantManagerUser.id);
+  if (isManager) {
+    return interaction.reply({ embeds: [createErrorEmbed('Error', `<@${assistantManagerUser.id}> is already the manager of **${isManager.name}**. A user cannot be both a manager and an assistant manager.`)], ephemeral: true });
   }
 
   // Check if user is already an assistant manager of another team
