@@ -379,7 +379,7 @@ async function handleShout(interaction) {
     const homeTeam = db.getTeamById.get(match.home_team_id);
     const awayTeam = db.getTeamById.get(match.away_team_id);
 
-    const announcement = `@everyone\n\n# <@&${homeTeam.role_id}> VS <@&${awayTeam.role_id}>\n\n🏟️ **${match.stadium}**\n\n${link}`;
+    const announcement = `# <@&${homeTeam.role_id}> VS <@&${awayTeam.role_id}>\n\n🏟️ **${match.stadium}**\n\n${link}`;
     
     await channel.send(announcement);
 
