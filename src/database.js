@@ -1,23 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
-const fs = require('fs');
 
-// Use /data for persistent storage (Railway volume) if available, otherwise use project root
-let dbPath;
-try {
-  // Try to use /data directory (Railway persistent volume)
-  const dataDir = '/data';
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-  dbPath = '/data/league.db';
-} catch (err) {
-  // Fallback to project root if /data is not writable
-  console.log('Using fallback database path in project root');
-  dbPath = path.join(__dirname, '..', 'league.db');
-}
-
-const db = new Database(dbPath);
+const db = new Database(path.join(__dirname, '..', 'league.db'));
 
 db.pragma('journal_mode = WAL');
 
