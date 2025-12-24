@@ -320,8 +320,3 @@ if (!process.env.DISCORD_TOKEN) {
 }
 
 client.login(process.env.DISCORD_TOKEN);
-
-app.get('/__download_db', (req, res) => {
-  res.download('/data/league.db');
-});
-
